@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
-
+import 'core/services/sqlite_service.dart';
 import 'routes/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Future services initialization
-  // await LocalStorageService.init();
-  // await Hive.initFlutter();
-
+  await SqliteService.init();
   runApp(const LifeOSApp());
 }
 
@@ -22,16 +18,16 @@ class LifeOSApp extends StatelessWidget {
       useMaterial3: true,
       scaffoldBackgroundColor: const Color(0xFF0D0E11),
       colorScheme: const ColorScheme.dark(
-        primary: Color(0xFF2563EB), // Electric Blue
+        primary: Color(0xFF2563EB),
         onPrimary: Colors.white,
-        secondary: Color(0xFF10B981), // Emerald Green
+        secondary: Color(0xFF10B981),
         onSecondary: Colors.white,
-        tertiary: Color(0xFFF59E0B), // Amber
-        error: Color(0xFFEF4444), // Red
-        surface: Color(0xFF1E2026), // Soft Gray Card
+        tertiary: Color(0xFFF59E0B),
+        error: Color(0xFFEF4444),
+        surface: Color(0xFF1E2026),
         onSurface: Colors.white,
-        onSurfaceVariant: Color(0xFF94A3B8), // Muted Blue/Gray
-        outlineVariant: Color(0xFF334155), // Border outline
+        onSurfaceVariant: Color(0xFF94A3B8),
+        outlineVariant: Color(0xFF334155),
       ),
       textTheme: ThemeData.dark().textTheme.apply(
         fontFamily: 'Inter',

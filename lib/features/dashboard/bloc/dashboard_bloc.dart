@@ -6,75 +6,24 @@ import 'dashboard_state.dart';
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final DashboardRepository _repository;
 
-  DashboardBloc(this._repository) : super(const DashboardInitial()) {
+  DashboardBloc(this._repository) : super(const DashboardState()) {
     on<DashboardStarted>(_onStarted);
-    on<DashboardSalaryUpdated>(_onSalaryUpdated);
-    on<DashboardGoalProgressUpdated>(_onGoalProgressUpdated);
-    on<DashboardDailyScoreIncremented>(_onDailyScoreIncremented);
     on<DashboardRefreshRequested>(_onRefreshRequested);
+    on<DashboardHitUpdated>(_onHitUpdated);
+    on<DashboardHitToggled>(_onHitToggled);
+    on<DashboardInsightRotated>(_onInsightRotated);
   }
 
   Future<void> _onStarted(
     DashboardStarted event,
     Emitter<DashboardState> emit,
   ) async {
-    emit(const DashboardLoadInProgress());
+    emit(state.copyWith(isLoading: true, errorMessage: null));
     try {
       final data = await _repository.getDashboardData();
-      emit(DashboardLoadSuccess(data));
+      emit(state.copyWith(isLoading: false, data: data));
     } catch (e) {
-      emit(DashboardLoadFailure(e.toString()));
-    }
-  }
-
-  Future<void> _onSalaryUpdated(
-    DashboardSalaryUpdated event,
-    Emitter<DashboardState> emit,
-  ) async {
-    final currentState = state;
-    if (currentState is DashboardLoadSuccess) {
-      emit(const DashboardLoadInProgress());
-      try {
-        await _repository.updateSalary(event.salary);
-        final data = await _repository.getDashboardData();
-        emit(DashboardLoadSuccess(data));
-      } catch (e) {
-        emit(DashboardLoadFailure(e.toString()));
-      }
-    }
-  }
-
-  Future<void> _onGoalProgressUpdated(
-    DashboardGoalProgressUpdated event,
-    Emitter<DashboardState> emit,
-  ) async {
-    final currentState = state;
-    if (currentState is DashboardLoadSuccess) {
-      emit(const DashboardLoadInProgress());
-      try {
-        await _repository.updateGoalProgress(event.progress);
-        final data = await _repository.getDashboardData();
-        emit(DashboardLoadSuccess(data));
-      } catch (e) {
-        emit(DashboardLoadFailure(e.toString()));
-      }
-    }
-  }
-
-  Future<void> _onDailyScoreIncremented(
-    DashboardDailyScoreIncremented event,
-    Emitter<DashboardState> emit,
-  ) async {
-    final currentState = state;
-    if (currentState is DashboardLoadSuccess) {
-      emit(const DashboardLoadInProgress());
-      try {
-        await _repository.incrementDailyScore();
-        final data = await _repository.getDashboardData();
-        emit(DashboardLoadSuccess(data));
-      } catch (e) {
-        emit(DashboardLoadFailure(e.toString()));
-      }
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
     }
   }
 
@@ -82,11 +31,54 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     DashboardRefreshRequested event,
     Emitter<DashboardState> emit,
   ) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
     try {
       final data = await _repository.getDashboardData();
-      emit(DashboardLoadSuccess(data));
+      emit(state.copyWith(isLoading: false, data: data));
     } catch (e) {
-      emit(DashboardLoadFailure(e.toString()));
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onHitUpdated(
+    DashboardHitUpdated event,
+    Emitter<DashboardState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    try {
+      await _repository.updateHit(event.task);
+      final data = await _repository.getDashboardData();
+      emit(state.copyWith(isLoading: false, data: data));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onHitToggled(
+    DashboardHitToggled event,
+    Emitter<DashboardState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    try {
+      await _repository.toggleHit();
+      final data = await _repository.getDashboardData();
+      emit(state.copyWith(isLoading: false, data: data));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onInsightRotated(
+    DashboardInsightRotated event,
+    Emitter<DashboardState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true, errorMessage: null));
+    try {
+      await _repository.rotateInsight();
+      final data = await _repository.getDashboardData();
+      emit(state.copyWith(isLoading: false, data: data));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
     }
   }
 }
