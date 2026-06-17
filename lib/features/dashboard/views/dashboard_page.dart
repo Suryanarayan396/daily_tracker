@@ -10,6 +10,7 @@ import '../../../core/widgets/app_card.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
+import '../../../core/services/backup_service.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -505,6 +506,43 @@ class DashboardPage extends StatelessWidget {
                     ),
                   ],
 
+                  SizedBox(height: context.screenHeight * 0.03),
+
+                  // ── Backup & Restore ──────────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildBackupButton(
+                          context: context,
+                          label: 'Download',
+                          icon: Icons.download_rounded,
+                          color: const Color(0xFF10B981),
+                          onTap: () => BackupService.exportBackup(context),
+                        ),
+                      ),
+                      SizedBox(width: context.screenWidth * 0.025),
+                      Expanded(
+                        child: _buildBackupButton(
+                          context: context,
+                          label: 'Upload',
+                          icon: Icons.upload_rounded,
+                          color: const Color(0xFFF59E0B),
+                          onTap: () => BackupService.importBackup(context),
+                        ),
+                      ),
+                      SizedBox(width: context.screenWidth * 0.025),
+                      Expanded(
+                        child: _buildBackupButton(
+                          context: context,
+                          label: 'Clear Data',
+                          icon: Icons.delete_sweep_rounded,
+                          color: const Color(0xFFEF4444),
+                          onTap: () => _showClearConfirmDialog(context),
+                        ),
+                      ),
+                    ],
+                  ),
+
                   SizedBox(height: context.screenHeight * 0.05),
                 ],
               ),
@@ -521,6 +559,85 @@ class DashboardPage extends StatelessWidget {
       style: context.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.bold,
         color: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildBackupButton({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: context.screenHeight * 0.018,
+          horizontal: context.screenWidth * 0.03,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.4), width: 1.2),
+          color: color.withOpacity(0.08),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 18),
+            SizedBox(width: context.screenWidth * 0.02),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showClearConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2026),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444), size: 22),
+            const SizedBox(width: 8),
+            const Text(
+              'Clear All Data',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will permanently delete ALL your career, finance, and YouTube tracker data.\n\nThis action cannot be undone. Are you sure?',
+          style: TextStyle(color: Color(0xFFAAAAAA), height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF10B981))),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              BackupService.clearAllData(context);
+            },
+            child: const Text('Clear All'),
+          ),
+        ],
       ),
     );
   }
