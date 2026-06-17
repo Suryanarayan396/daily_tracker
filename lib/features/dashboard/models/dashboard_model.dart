@@ -1,119 +1,48 @@
 import 'package:equatable/equatable.dart';
 
 class DashboardModel extends Equatable {
-  final String welcomeMessage;
-  final String dailyMission;
-  final int streakDays;
-  final int dailyScore;
-  final String highestImpactTask;
-  final bool isHitCompleted;
-  final String currentLawInsight;
+  final String username;
   final double currentSalary;
   final double targetSalary;
-  final double debt;
+  final int totalApplications;
+  final Map<String, dynamic>? upcomingInterview; // { 'company': String, 'role': String, 'interviewDate': String }
+  final Map<String, int> statusCounts; // { 'Recruiter': int, 'Interview Scheduled': int, ... }
+  final double balance;
   final double emergencyFund;
-  final int careerApplicationsCount;
-  final int youtubeVideosUploadedCount;
+  final double savings;
+  final int youtubeTotalContent;
+  final int youtubePublishedContent;
+  final Map<String, dynamic>? upcomingContent; // { 'title': String, 'target_date': String, 'status': String }
 
   const DashboardModel({
-    required this.welcomeMessage,
-    required this.dailyMission,
-    required this.streakDays,
-    required this.dailyScore,
-    required this.highestImpactTask,
-    required this.isHitCompleted,
-    required this.currentLawInsight,
+    required this.username,
     required this.currentSalary,
     required this.targetSalary,
-    required this.debt,
+    required this.totalApplications,
+    this.upcomingInterview,
+    required this.statusCounts,
+    required this.balance,
     required this.emergencyFund,
-    required this.careerApplicationsCount,
-    required this.youtubeVideosUploadedCount,
+    required this.savings,
+    required this.youtubeTotalContent,
+    required this.youtubePublishedContent,
+    this.upcomingContent,
   });
-
-  DashboardModel copyWith({
-    String? welcomeMessage,
-    String? dailyMission,
-    int? streakDays,
-    int? dailyScore,
-    String? highestImpactTask,
-    bool? isHitCompleted,
-    String? currentLawInsight,
-    double? currentSalary,
-    double? targetSalary,
-    double? debt,
-    double? emergencyFund,
-    int? careerApplicationsCount,
-    int? youtubeVideosUploadedCount,
-  }) {
-    return DashboardModel(
-      welcomeMessage: welcomeMessage ?? this.welcomeMessage,
-      dailyMission: dailyMission ?? this.dailyMission,
-      streakDays: streakDays ?? this.streakDays,
-      dailyScore: dailyScore ?? this.dailyScore,
-      highestImpactTask: highestImpactTask ?? this.highestImpactTask,
-      isHitCompleted: isHitCompleted ?? this.isHitCompleted,
-      currentLawInsight: currentLawInsight ?? this.currentLawInsight,
-      currentSalary: currentSalary ?? this.currentSalary,
-      targetSalary: targetSalary ?? this.targetSalary,
-      debt: debt ?? this.debt,
-      emergencyFund: emergencyFund ?? this.emergencyFund,
-      careerApplicationsCount: careerApplicationsCount ?? this.careerApplicationsCount,
-      youtubeVideosUploadedCount: youtubeVideosUploadedCount ?? this.youtubeVideosUploadedCount,
-    );
-  }
-
-  factory DashboardModel.fromJson(Map<String, dynamic> json) {
-    return DashboardModel(
-      welcomeMessage: json['welcome_message'] as String? ?? '',
-      dailyMission: json['daily_mission'] as String? ?? '',
-      streakDays: json['streak_days'] as int? ?? 0,
-      dailyScore: json['daily_score'] as int? ?? 0,
-      highestImpactTask: json['highest_impact_task'] as String? ?? '',
-      isHitCompleted: (json['is_hit_completed'] as bool? ?? false),
-      currentLawInsight: json['current_law_insight'] as String? ?? '',
-      currentSalary: (json['current_salary'] as num?)?.toDouble() ?? 0.0,
-      targetSalary: (json['target_salary'] as num?)?.toDouble() ?? 0.0,
-      debt: (json['debt'] as num?)?.toDouble() ?? 0.0,
-      emergencyFund: (json['emergency_fund'] as num?)?.toDouble() ?? 0.0,
-      careerApplicationsCount: json['career_applications_count'] as int? ?? 0,
-      youtubeVideosUploadedCount: json['youtube_videos_uploaded_count'] as int? ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'welcome_message': welcomeMessage,
-      'daily_mission': dailyMission,
-      'streak_days': streakDays,
-      'daily_score': dailyScore,
-      'highest_impact_task': highestImpactTask,
-      'is_hit_completed': isHitCompleted,
-      'current_law_insight': currentLawInsight,
-      'current_salary': currentSalary,
-      'target_salary': targetSalary,
-      'debt': debt,
-      'emergency_fund': emergencyFund,
-      'career_applications_count': careerApplicationsCount,
-      'youtube_videos_uploaded_count': youtubeVideosUploadedCount,
-    };
-  }
 
   @override
   List<Object?> get props => [
-        welcomeMessage,
-        dailyMission,
-        streakDays,
-        dailyScore,
-        highestImpactTask,
-        isHitCompleted,
-        currentLawInsight,
+        username,
         currentSalary,
         targetSalary,
-        debt,
+        totalApplications,
+        upcomingInterview,
+        statusCounts,
+        balance,
         emergencyFund,
-        careerApplicationsCount,
-        youtubeVideosUploadedCount,
+        savings,
+        youtubeTotalContent,
+        youtubePublishedContent,
+        upcomingContent,
       ];
 }
 

@@ -11,7 +11,7 @@ class AppStrings {
   static const String error = 'Something went wrong. Please try again.';
   
   // Feature Specific Strings
-  static const String dashboardTitle = 'Daily Tracker Dashboard';
+  static const String dashboardTitle = 'Trillionaire Life Dashboard';
   static const String dailyReflectionTitle = 'Daily Reflection';
   static const String learningTrackerTitle = 'Learning Tracker';
   static const String financeTrackerTitle = 'Finance Tracker';

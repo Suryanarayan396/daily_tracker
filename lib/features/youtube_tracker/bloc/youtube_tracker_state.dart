@@ -4,46 +4,40 @@ import '../models/youtube_tracker_model.dart';
 class YoutubeTrackerState extends Equatable {
   const YoutubeTrackerState({
     this.isLoading = false,
-    this.settings,
-    this.videos = const [],
-    this.calendarEntries = const [],
+    this.stats = const YoutubeChannelStatsModel(),
+    this.contentList = const [],
     this.errorMessage,
   });
 
   final bool isLoading;
-  final YoutubeSettingsModel? settings;
-  final List<YoutubeVideoModel> videos;
-  final List<ContentCalendarEntryModel> calendarEntries;
+  final YoutubeChannelStatsModel stats;
+  final List<YoutubeContentModel> contentList;
   final String? errorMessage;
 
-  int get subscribers => settings?.subscribers ?? 0;
-  int get totalVideosUploaded => videos.where((v) => v.stage == 'Published').length;
-  int get scriptsWritten => videos.where((v) => v.stage == 'Script').length;
-  int get shortsUploaded => videos.where((v) => v.type == 'Short' && v.stage == 'Published').length;
-  int get longsUploaded => videos.where((v) => v.type == 'Long' && v.stage == 'Published').length;
-  int get totalViews => videos.fold(0, (sum, v) => sum + v.views);
-  int get watchTimeMinutes => videos.fold(0, (sum, v) => sum + v.watchTimeMinutes);
+  List<YoutubeContentModel> get plannedContent =>
+      contentList.where((c) => c.status == 'planned').toList();
 
-  int get inPipeline => videos.where((v) => v.stage != 'Published').length;
-  List<YoutubeVideoModel> get publishedVideos => videos.where((v) => v.stage == 'Published').toList();
-  List<YoutubeVideoModel> get pipelineVideos => videos.where((v) => v.stage != 'Published').toList();
+  List<YoutubeContentModel> get pipelineContent => contentList
+      .where((c) => ['scripting', 'filming', 'editing', 'thumbnail'].contains(c.status))
+      .toList();
+
+  List<YoutubeContentModel> get publishedContent =>
+      contentList.where((c) => c.status == 'published').toList();
 
   YoutubeTrackerState copyWith({
     bool? isLoading,
-    YoutubeSettingsModel? settings,
-    List<YoutubeVideoModel>? videos,
-    List<ContentCalendarEntryModel>? calendarEntries,
+    YoutubeChannelStatsModel? stats,
+    List<YoutubeContentModel>? contentList,
     String? errorMessage,
   }) {
     return YoutubeTrackerState(
       isLoading: isLoading ?? this.isLoading,
-      settings: settings ?? this.settings,
-      videos: videos ?? this.videos,
-      calendarEntries: calendarEntries ?? this.calendarEntries,
+      stats: stats ?? this.stats,
+      contentList: contentList ?? this.contentList,
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [isLoading, settings, videos, calendarEntries, errorMessage];
+  List<Object?> get props => [isLoading, stats, contentList, errorMessage];
 }

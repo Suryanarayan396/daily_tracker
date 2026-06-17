@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/extensions/context_extension.dart';
 import '../../features/dashboard/views/dashboard_page.dart';
+import '../../features/dashboard/bloc/dashboard_bloc.dart';
+import '../../features/dashboard/bloc/dashboard_event.dart';
 import '../../features/career_tracker/views/career_tracker_page.dart';
+import '../../features/career_tracker/bloc/career_tracker_bloc.dart';
+import '../../features/career_tracker/bloc/career_tracker_event.dart';
 import '../../features/finance_tracker/views/finance_tracker_page.dart';
+import '../../features/finance_tracker/bloc/finance_tracker_bloc.dart';
+import '../../features/finance_tracker/bloc/finance_tracker_event.dart';
 import '../../features/youtube_tracker/views/youtube_tracker_page.dart';
+import '../../features/youtube_tracker/bloc/youtube_tracker_bloc.dart';
+import '../../features/youtube_tracker/bloc/youtube_tracker_event.dart';
+
+import '../../core/services/notification_service.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -15,6 +26,12 @@ class MainNavigationPage extends StatefulWidget {
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService().requestPermissions();
+  }
 
   final List<Widget> _pages = const [
     DashboardPage(),
@@ -63,6 +80,15 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           onDestinationSelected: (index) {
             setState(() => _currentIndex = index);
             HapticFeedback.lightImpact();
+            if (index == 0) {
+              context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+            } else if (index == 1) {
+              context.read<CareerTrackerBloc>().add(const CareerTrackerRefreshRequested());
+            } else if (index == 2) {
+              context.read<FinanceTrackerBloc>().add(const FinanceTrackerRefreshRequested());
+            } else if (index == 3) {
+              context.read<YoutubeTrackerBloc>().add(const YoutubeTrackerRefreshRequested());
+            }
           },
           destinations: const [
             NavigationDestination(

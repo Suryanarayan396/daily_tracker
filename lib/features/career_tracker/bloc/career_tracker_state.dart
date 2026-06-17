@@ -18,7 +18,7 @@ class CareerTrackerState extends Equatable {
 
   // Getters for UI KPI cards
   int get totalApps => applications.length;
-  int get recruitersContacted => applications.where((a) => a.recruiterContacted).length;
+  int get recruitersContacted => applications.where((a) => a.status == 'Recruiter').length;
   int get interviewsScheduled => applications.where((a) => a.status == 'Interview Scheduled').length;
   int get interviewsDone => applications.where((a) => a.status == 'Interview Done').length;
   int get offersReceived => applications.where((a) => a.status == 'Offer').length;

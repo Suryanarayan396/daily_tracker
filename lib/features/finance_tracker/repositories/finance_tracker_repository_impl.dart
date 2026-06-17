@@ -19,15 +19,15 @@ class FinanceTrackerRepositoryImpl implements FinanceTrackerRepository {
     if (maps.isEmpty) {
       final settings = FinanceSettingsModel(
         id: 1,
-        salary: 75000.0,
-        netWorth: 450000.0,
-        debt: 45000.0,
-        emergencyFund: 120000.0,
-        emergencyFundTarget: 200000.0,
-        savings: 85000.0,
-        savingsTarget: 150000.0,
-        netWorthHistory: const [380000.0, 395000.0, 410000.0, 422000.0, 435000.0, 450000.0],
-        netWorthMonths: const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        salary: 0.0,
+        netWorth: 0.0,
+        debt: 0.0,
+        emergencyFund: 0.0,
+        emergencyFundTarget: 0.0,
+        savings: 0.0,
+        savingsTarget: 0.0,
+        netWorthHistory: const [],
+        netWorthMonths: const [],
       );
 
       await _db.insert(
@@ -82,27 +82,7 @@ class FinanceTrackerRepositoryImpl implements FinanceTrackerRepository {
 
   @override
   Future<List<ExpenseItemModel>> getAllExpenses() async {
-    final maps = await _db.query('expense_items', orderBy: 'id DESC');
-    if (maps.isEmpty) {
-      final defaults = [
-        const ExpenseItemModel(id: 0, category: 'Rent', amount: 18000.0),
-        const ExpenseItemModel(id: 0, category: 'Groceries', amount: 8500.0),
-        const ExpenseItemModel(id: 0, category: 'Utilities', amount: 4200.0),
-        const ExpenseItemModel(id: 0, category: 'Transport', amount: 3500.0),
-        const ExpenseItemModel(id: 0, category: 'Entertainment', amount: 6000.0),
-      ];
-
-      for (final item in defaults) {
-        await _db.insert(
-          'expense_items',
-          item.toMap(),
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-      SqliteService.notify('expense_items');
-      return getAllExpenses();
-    }
-
+    final maps = await _db.query('expense_items', orderBy: 'date DESC');
     return maps.map((map) => ExpenseItemModel.fromMap(map)).toList();
   }
 
@@ -112,12 +92,34 @@ class FinanceTrackerRepositoryImpl implements FinanceTrackerRepository {
   }
 
   @override
-  Future<void> addExpense(String category, double amount) async {
-    final item = ExpenseItemModel(id: 0, category: category, amount: amount);
+  Future<void> addExpense({
+    required String category,
+    required String description,
+    required double amount,
+    required DateTime date,
+  }) async {
+    final item = ExpenseItemModel(
+      id: 0,
+      category: category,
+      description: description,
+      amount: amount,
+      date: date,
+    );
     await _db.insert(
       'expense_items',
       item.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    SqliteService.notify('expense_items');
+  }
+
+  @override
+  Future<void> updateExpense(ExpenseItemModel expense) async {
+    await _db.update(
+      'expense_items',
+      expense.toMap(),
+      where: 'id = ?',
+      whereArgs: [expense.id],
     );
     SqliteService.notify('expense_items');
   }

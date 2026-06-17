@@ -1,29 +1,17 @@
 import '../models/youtube_tracker_model.dart';
 
 abstract class YoutubeTrackerRepository {
-  Future<YoutubeSettingsModel> getSettings();
-  Stream<String> watchSettings();
-  Future<void> updateSettings({int? subscribers});
+  Future<YoutubeChannelStatsModel> getChannelStats();
+  Stream<String> watchChannelStats();
+  Future<void> updateChannelStat(String key, String value);
 
-  Future<List<YoutubeVideoModel>> getAllVideos();
-  Stream<String> watchVideos();
-  Future<void> addVideo({
+  Future<List<YoutubeContentModel>> getAllContent();
+  Stream<String> watchContent();
+  Future<void> addContent({
     required String title,
-    required String type,
-    required String stage,
-    int views = 0,
-    int watchTimeMinutes = 0,
+    required String targetDate,
+    String reminderDateTime = '',
   });
-  Future<void> updateVideo(YoutubeVideoModel model);
-  Future<void> deleteVideo(int id);
-
-  Future<List<ContentCalendarEntryModel>> getCalendarEntries();
-  Stream<String> watchCalendar();
-  Future<void> addCalendarEntry({
-    required String title,
-    required String type,
-    required DateTime scheduledDate,
-  });
-  Future<void> toggleCalendarEntry(int id);
-  Future<void> deleteCalendarEntry(int id);
+  Future<void> updateContent(YoutubeContentModel content);
+  Future<void> deleteContent(int id);
 }

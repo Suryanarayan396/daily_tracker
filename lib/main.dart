@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'core/services/sqlite_service.dart';
+import 'core/services/notification_service.dart';
 import 'routes/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SqliteService.init();
+  await NotificationService().init();
   runApp(const LifeOSApp());
 }
 
@@ -37,7 +39,7 @@ class LifeOSApp extends StatelessWidget {
     );
 
     return MaterialApp.router(
-      title: 'LifeOS',
+      title: 'Trillionaire Life',
       debugShowCheckedModeBanner: false,
       theme: darkTheme,
       darkTheme: darkTheme,

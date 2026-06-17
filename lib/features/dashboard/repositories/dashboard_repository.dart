@@ -5,4 +5,6 @@ abstract class DashboardRepository {
   Future<void> updateHit(String task);
   Future<void> toggleHit();
   Future<void> rotateInsight();
+  Future<void> updateTargetSalary(double target);
+  Stream<String> watchChanges();
 }

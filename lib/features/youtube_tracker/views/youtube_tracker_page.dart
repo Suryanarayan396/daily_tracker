@@ -11,318 +11,24 @@ import '../bloc/youtube_tracker_bloc.dart';
 import '../bloc/youtube_tracker_event.dart';
 import '../bloc/youtube_tracker_state.dart';
 
-const _ytRed = Color(0xFFFF0000);
-
 class YoutubeTrackerPage extends StatelessWidget {
   const YoutubeTrackerPage({super.key});
 
-  void showAddVideoDialog(BuildContext context) {
-    final titleCtrl = TextEditingController();
-    String selectedType = 'Long';
-    String selectedStage = 'Script';
-
-    showModalBottomSheet(
+  Future<String?> _selectDateTime(BuildContext context) async {
+    final date = await showDatePicker(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: context.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
-            left: ctx.screenWidth * 0.05,
-            right: ctx.screenWidth * 0.05,
-            top: ctx.screenHeight * 0.03,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: ctx.screenWidth * 0.12, height: 4,
-                  decoration: BoxDecoration(color: ctx.colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: ctx.screenHeight * 0.02),
-              Text('Log New Video', style: ctx.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-              SizedBox(height: ctx.screenHeight * 0.025),
-              TextField(
-                controller: titleCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Video Title', border: OutlineInputBorder()),
-              ),
-              SizedBox(height: ctx.screenHeight * 0.02),
-              Row(children: [
-                Expanded(child: DropdownButtonFormField<String>(
-                  value: selectedType,
-                  dropdownColor: ctx.colorScheme.surface,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: 'Short', child: Text('Short')),
-                    DropdownMenuItem(value: 'Long', child: Text('Long')),
-                  ],
-                  onChanged: (v) { if (v != null) setS(() => selectedType = v); },
-                )),
-                SizedBox(width: ctx.screenWidth * 0.03),
-                Expanded(child: DropdownButtonFormField<String>(
-                  value: selectedStage,
-                  dropdownColor: ctx.colorScheme.surface,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Stage', border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: 'Script', child: Text('Script')),
-                    DropdownMenuItem(value: 'Recording', child: Text('Recording')),
-                    DropdownMenuItem(value: 'Editing', child: Text('Editing')),
-                    DropdownMenuItem(value: 'Published', child: Text('Published')),
-                  ],
-                  onChanged: (v) { if (v != null) setS(() => selectedStage = v); },
-                )),
-              ]),
-              SizedBox(height: ctx.screenHeight * 0.03),
-              SizedBox(
-                width: double.infinity,
-                height: ctx.screenHeight * 0.055,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final t = titleCtrl.text.trim();
-                    if (t.isNotEmpty) {
-                      context.read<YoutubeTrackerBloc>().add(YoutubeTrackerVideoAdded(
-                        title: t,
-                        type: selectedType,
-                        stage: selectedStage,
-                        views: 0,
-                        watchTimeMinutes: 0,
-                      ));
-                      HapticFeedback.mediumImpact();
-                    }
-                    Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _ytRed,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
-                  ),
-                  child: const Text('Add to Pipeline', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 305)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-  }
-
-  void _showAddCalendarEntryDialog(BuildContext context) {
-    final titleCtrl = TextEditingController();
-    String selectedType = 'Long';
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
-
-    showDialog(
+    if (date == null) return null;
+    final time = await showTimePicker(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          backgroundColor: context.colorScheme.surface,
-          title: const Text('Add Calendar Entry', style: TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Content Title', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedType,
-                dropdownColor: context.colorScheme.surface,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'Short', child: Text('Short')),
-                  DropdownMenuItem(value: 'Long', child: Text('Long')),
-                ],
-                onChanged: (v) { if (v != null) setS(() => selectedType = v); },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}', style: const TextStyle(color: Colors.white70)),
-                  TextButton(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: selectedDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 120)),
-                      );
-                      if (picked != null) setS(() => selectedDate = picked);
-                    },
-                    child: const Text('Select'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            TextButton(
-              onPressed: () {
-                final t = titleCtrl.text.trim();
-                if (t.isNotEmpty) {
-                  context.read<YoutubeTrackerBloc>().add(YoutubeTrackerCalendarEntryAdded(
-                    title: t,
-                    type: selectedType,
-                    scheduledDate: selectedDate,
-                  ));
-                  HapticFeedback.mediumImpact();
-                }
-                Navigator.pop(ctx);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-      ),
+      initialTime: TimeOfDay.now(),
     );
-  }
-
-  void _showSubscribersDialog(BuildContext context, int currentSubs) {
-    final ctrl = TextEditingController(text: currentSubs.toString());
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.colorScheme.surface,
-        title: const Text('Update Subscribers', style: TextStyle(color: Colors.white)),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(labelText: 'Subscribers count', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              final count = int.tryParse(ctrl.text.trim()) ?? currentSubs;
-              context.read<YoutubeTrackerBloc>().add(YoutubeTrackerSubscribersUpdated(subscribers: count));
-              HapticFeedback.mediumImpact();
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditVideoDialog(BuildContext context, YoutubeVideoModel v) {
-    final viewsCtrl = TextEditingController(text: v.views.toString());
-    final watchTimeCtrl = TextEditingController(text: v.watchTimeMinutes.toString());
-    String selectedStage = v.stage;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
-            left: ctx.screenWidth * 0.05,
-            right: ctx.screenWidth * 0.05,
-            top: ctx.screenHeight * 0.03,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: ctx.screenWidth * 0.12, height: 4,
-                  decoration: BoxDecoration(color: ctx.colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: ctx.screenHeight * 0.02),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text('Edit "${v.title}"',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: ctx.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      context.read<YoutubeTrackerBloc>().add(YoutubeTrackerVideoDeleted(id: v.id));
-                      HapticFeedback.mediumImpact();
-                      Navigator.pop(ctx);
-                    },
-                    icon: Icon(Icons.delete_outline_rounded, color: ctx.colorScheme.error),
-                  ),
-                ],
-              ),
-              SizedBox(height: ctx.screenHeight * 0.02),
-              DropdownButtonFormField<String>(
-                value: selectedStage,
-                dropdownColor: ctx.colorScheme.surface,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Pipeline Stage', border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'Script', child: Text('Script')),
-                  DropdownMenuItem(value: 'Recording', child: Text('Recording')),
-                  DropdownMenuItem(value: 'Editing', child: Text('Editing')),
-                  DropdownMenuItem(value: 'Published', child: Text('Published')),
-                ],
-                onChanged: (val) { if (val != null) setS(() => selectedStage = val); },
-              ),
-              if (selectedStage == 'Published') ...[
-                SizedBox(height: ctx.screenHeight * 0.02),
-                TextField(
-                  controller: viewsCtrl,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Views count', border: OutlineInputBorder()),
-                ),
-                SizedBox(height: ctx.screenHeight * 0.02),
-                TextField(
-                  controller: watchTimeCtrl,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Watch Time (minutes)', border: OutlineInputBorder()),
-                ),
-              ],
-              SizedBox(height: ctx.screenHeight * 0.03),
-              SizedBox(
-                width: double.infinity,
-                height: ctx.screenHeight * 0.055,
-                child: ElevatedButton(
-                  onPressed: () {
-                    final views = int.tryParse(viewsCtrl.text.trim()) ?? 0;
-                    final wt = int.tryParse(watchTimeCtrl.text.trim()) ?? 0;
-                    final updated = v.copyWith(
-                      stage: selectedStage,
-                      views: selectedStage == 'Published' ? views : 0,
-                      watchTimeMinutes: selectedStage == 'Published' ? wt : 0,
-                    );
-                    context.read<YoutubeTrackerBloc>().add(YoutubeTrackerVideoUpdated(model: updated));
-                    HapticFeedback.mediumImpact();
-                    Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _ytRed,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
-                  ),
-                  child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    if (time == null) return null;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    return DateFormat('dd MMM yyyy • hh:mm a').format(dt);
   }
 
   @override
@@ -332,25 +38,32 @@ class YoutubeTrackerPage extends StatelessWidget {
         if (state.isLoading) {
           return const AppLoader();
         }
-        if (state.errorMessage != null && state.settings == null) {
-          return Center(
-            child: Padding(
-              padding: EdgeInsets.all(context.screenWidth * 0.08),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline_rounded, color: context.colorScheme.error, size: AppSizes.icon48),
-                  SizedBox(height: context.screenHeight * 0.02),
-                  Text(state.errorMessage!, textAlign: TextAlign.center, style: TextStyle(color: context.colorScheme.error)),
-                ],
+
+        if (state.errorMessage != null && state.contentList.isEmpty) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: EdgeInsets.all(context.screenWidth * 0.08),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline_rounded, color: context.colorScheme.error, size: AppSizes.icon48),
+                    SizedBox(height: context.screenHeight * 0.02),
+                    Text(
+                      state.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.colorScheme.error),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
 
-        final watchHours = (state.watchTimeMinutes / 60).round();
-        final published = state.publishedVideos;
-        final pipeline = state.pipelineVideos;
+        final planned = state.plannedContent;
+        final pipeline = state.pipelineContent;
+        final published = state.publishedContent;
 
         return Scaffold(
           body: SafeArea(
@@ -366,189 +79,146 @@ class YoutubeTrackerPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('YouTube Studio',
-                            style: context.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                        SizedBox(height: context.screenHeight * 0.005),
-                        Text('Build your content velocity machine.',
-                            style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.onSurfaceVariant)),
-                      ]),
-                      IconButton(
-                        onPressed: () => showAddVideoDialog(context),
-                        style: IconButton.styleFrom(
-                            backgroundColor: _ytRed, foregroundColor: Colors.white,
-                            padding: const EdgeInsets.all(AppSizes.padding12)),
-                        icon: const Icon(Icons.add_rounded),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: context.screenHeight * 0.025),
-
-                  // ── Channel Momentum Hero ─────────────────────────────
-                  GestureDetector(
-                    onTap: () => _showSubscribersDialog(context, state.subscribers),
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(context.screenWidth * 0.05),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [_ytRed.withOpacity(0.18), context.colorScheme.surface],
-                          begin: Alignment.topLeft, end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(AppSizes.br16),
-                        border: Border.all(color: _ytRed.withOpacity(0.35)),
-                      ),
-                      child: Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('SUBSCRIBERS', style: context.textTheme.bodySmall?.copyWith(
-                                color: context.colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
-                            SizedBox(height: context.screenHeight * 0.006),
-                            Text(_fmt(state.subscribers),
-                                style: context.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                          ]),
-                          const Spacer(),
-                          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                            _heroChip(context, Icons.visibility_rounded, '${_fmt(state.totalViews)} views'),
-                            SizedBox(height: context.screenHeight * 0.01),
-                            _heroChip(context, Icons.timer_rounded, '$watchHours hrs watch time'),
-                          ]),
+                          Text(
+                            'YouTube Studio',
+                            style: context.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: context.screenHeight * 0.005),
+                          Text(
+                            'Build your content velocity machine.',
+                            style: context.textTheme.bodyMedium?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                  SizedBox(height: context.screenHeight * 0.025),
-
-                  // ── Stats Grid (6 KPIs) ───────────────────────────────
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 3,
-                    crossAxisSpacing: context.screenWidth * 0.03,
-                    mainAxisSpacing: context.screenWidth * 0.03,
-                    childAspectRatio: 1.1,
-                    children: [
-                      _kpiCard(context, 'Scripts\nWritten', '${state.scriptsWritten}', Icons.edit_note_rounded, _ytRed),
-                      _kpiCard(context, 'Shorts\nUploaded', '${state.shortsUploaded}', Icons.bolt_rounded, context.colorScheme.tertiary),
-                      _kpiCard(context, 'Long Videos\nUploaded', '${state.longsUploaded}', Icons.video_library_rounded, context.colorScheme.primary),
-                      _kpiCard(context, 'Total\nViews', _fmt(state.totalViews), Icons.visibility_rounded, context.colorScheme.secondary),
-                      _kpiCard(context, 'Watch Time\n(hrs)', '$watchHours', Icons.timer_rounded, _ytRed),
-                      _kpiCard(context, 'In\nPipeline', '${state.inPipeline}', Icons.pending_actions_rounded, context.colorScheme.tertiary),
                     ],
                   ),
+                  SizedBox(height: context.screenHeight * 0.025),
+
+                  // ── Channel Stats Tiles ─────────────────────────────────
+                  _buildChannelStatsRow(context, state.stats),
                   SizedBox(height: context.screenHeight * 0.03),
 
-                  // ── Published Videos ──────────────────────────────────
-                  Text('Published Videos', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                  // ── Content Calendar Section ────────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Content Calendar',
+                        style: context.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _showAddContentBottomSheet(context),
+                        icon: Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: context.colorScheme.primary,
+                          size: 24,
+                        ),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
                   SizedBox(height: context.screenHeight * 0.015),
-                  if (published.isEmpty)
-                    AppCard(child: Center(child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: context.screenHeight * 0.02),
-                      child: Text('No videos published yet.', style: TextStyle(color: context.colorScheme.onSurfaceVariant)),
-                    )))
+                  if (planned.isEmpty)
+                    AppCard(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: context.screenHeight * 0.03),
+                          child: Text(
+                            'No planned content. Tap + to add.',
+                            style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
+                    )
                   else
-                    ...published.map((v) => _videoCard(context, v)),
-                  SizedBox(height: context.screenHeight * 0.025),
-
-                  // ── Production Pipeline ───────────────────────────────
-                  Text('Production Pipeline', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                  SizedBox(height: context.screenHeight * 0.015),
-                  if (pipeline.isEmpty)
-                    AppCard(child: Center(child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: context.screenHeight * 0.02),
-                      child: Text('No videos in pipeline.', style: TextStyle(color: context.colorScheme.onSurfaceVariant)),
-                    )))
-                  else
-                    ...pipeline.map((v) => _pipelineCard(context, v)),
-                  SizedBox(height: context.screenHeight * 0.025),
-
-                  // ── Content Calendar ──────────────────────────────────
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('Content Calendar', style: context.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                    IconButton(
-                      onPressed: () => _showAddCalendarEntryDialog(context),
-                      icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 22),
-                    ),
-                  ]),
-                  SizedBox(height: context.screenHeight * 0.015),
-                  AppCard(
-                    child: Column(
-                      children: state.calendarEntries.isEmpty
-                          ? [
-                              Padding(
-                                padding: EdgeInsets.symmetric(vertical: context.screenHeight * 0.02),
-                                child: Center(child: Text('No scheduled entries.', style: TextStyle(color: context.colorScheme.onSurfaceVariant))),
-                              )
-                            ]
-                          : state.calendarEntries.map((entry) {
-                              final daysLeft = entry.scheduledDate.difference(DateTime.now()).inDays;
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: context.screenHeight * 0.015),
-                                child: Row(children: [
-                                  Container(
-                                    width: 44, height: 44,
-                                    decoration: BoxDecoration(
-                                      color: entry.isPublished
-                                          ? context.colorScheme.secondary.withOpacity(0.12)
-                                          : _ytRed.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      entry.type == 'Short' ? Icons.bolt_rounded : Icons.video_library_rounded,
-                                      color: entry.isPublished ? context.colorScheme.secondary : _ytRed,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  SizedBox(width: context.screenWidth * 0.035),
-                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Text(entry.title,
-                                        style: context.textTheme.bodyMedium?.copyWith(
-                                            color: Colors.white, fontWeight: FontWeight.w600),
-                                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    Text(
-                                      entry.isPublished
-                                          ? '✓ Published'
-                                          : daysLeft <= 0 ? 'Due today!' : 'In $daysLeft days • ${entry.type}',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: entry.isPublished
-                                            ? context.colorScheme.secondary
-                                            : daysLeft <= 2 ? _ytRed : context.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ])),
-                                  IconButton(
-                                    icon: Icon(Icons.delete_outline_rounded, color: context.colorScheme.error.withOpacity(0.7), size: 20),
-                                    onPressed: () {
-                                      context.read<YoutubeTrackerBloc>().add(YoutubeTrackerCalendarEntryDeleted(id: entry.id));
-                                      HapticFeedback.lightImpact();
-                                    },
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      context.read<YoutubeTrackerBloc>().add(YoutubeTrackerCalendarEntryToggled(id: entry.id));
-                                      HapticFeedback.lightImpact();
-                                    },
-                                    child: Container(
-                                      width: 28, height: 28,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: entry.isPublished ? context.colorScheme.secondary : context.colorScheme.outlineVariant,
-                                          width: 2,
-                                        ),
-                                        color: entry.isPublished ? context.colorScheme.secondary : Colors.transparent,
-                                      ),
-                                      child: entry.isPublished
-                                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-                                          : null,
-                                      ),
-                                    ),
-                                  ]),
-                                );
-                              }).toList(),
+                    SizedBox(
+                      height: 110,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: planned.length,
+                        itemBuilder: (context, index) {
+                          return _buildContentCalendarCard(context, planned[index]);
+                        },
                       ),
                     ),
-                    SizedBox(height: context.screenHeight * 0.05),
+                  SizedBox(height: context.screenHeight * 0.035),
+
+                  // ── Production Pipeline Section ─────────────────────────
+                  Text(
+                    'Production Pipeline',
+                    style: context.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: context.screenHeight * 0.015),
+                  if (pipeline.isEmpty)
+                    AppCard(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: context.screenHeight * 0.03),
+                          child: Text(
+                            'No videos in production pipeline.',
+                            style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 110,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: pipeline.length,
+                        itemBuilder: (context, index) {
+                          return _buildProductionPipelineCard(context, pipeline[index]);
+                        },
+                      ),
+                    ),
+                  SizedBox(height: context.screenHeight * 0.035),
+
+                  // ── Published Videos Section ────────────────────────────
+                  Text(
+                    'Published Videos',
+                    style: context.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: context.screenHeight * 0.015),
+                  if (published.isEmpty)
+                    AppCard(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: context.screenHeight * 0.03),
+                          child: Text(
+                            'No published videos yet.',
+                            style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: published.length,
+                      itemBuilder: (context, index) {
+                        return _buildPublishedVideoTile(context, published[index]);
+                      },
+                    ),
+                  SizedBox(height: context.screenHeight * 0.04),
                 ],
               ),
             ),
@@ -558,114 +228,957 @@ class YoutubeTrackerPage extends StatelessWidget {
     );
   }
 
-  Widget _heroChip(BuildContext context, IconData icon, String label) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: context.screenWidth * 0.025, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: _ytRed, size: 14),
-        SizedBox(width: 4),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-      ]),
-    );
-  }
+  // ── Stats ListView Builder ──────────────────────────────────────────────
+  Widget _buildChannelStatsRow(BuildContext context, YoutubeChannelStatsModel stats) {
+    final items = [
+      {'key': 'subscribers', 'label': 'Subscribers', 'value': stats.subscribers, 'icon': Icons.people_rounded},
+      {'key': 'views', 'label': 'Total Views', 'value': stats.totalViews, 'icon': Icons.visibility_rounded},
+      {'key': 'videos', 'label': 'Total Videos', 'value': stats.totalVideos, 'icon': Icons.video_collection_rounded},
+      {'key': 'watch_hours', 'label': 'Watch Hours', 'value': stats.watchHours, 'icon': Icons.timer_rounded},
+      {'key': 'monthly_revenue', 'label': 'Monthly Revenue', 'value': stats.monthlyRevenue, 'icon': Icons.monetization_on_rounded},
+    ];
 
-  Widget _kpiCard(BuildContext context, String title, String val, IconData icon, Color color) {
-    return AppCard(
-      padding: EdgeInsets.all(context.screenWidth * 0.025),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Icon(icon, color: color, size: 18),
-        Text(val, style: context.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-        Text(title, style: context.textTheme.labelSmall?.copyWith(color: context.colorScheme.onSurfaceVariant, height: 1.2)),
-      ]),
-    );
-  }
-
-  Widget _videoCard(BuildContext context, YoutubeVideoModel v) {
-    final watchHrs = (v.watchTimeMinutes / 60).toStringAsFixed(1);
-    return Padding(
-      padding: EdgeInsets.only(bottom: context.screenHeight * 0.012),
-      child: GestureDetector(
-        onTap: () => _showEditVideoDialog(context, v),
-        child: AppCard(
-          child: Row(children: [
-            Container(
-              width: 4, height: context.screenHeight * 0.065,
-              decoration: BoxDecoration(color: _ytRed, borderRadius: BorderRadius.circular(2)),
-            ),
-            SizedBox(width: context.screenWidth * 0.035),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(v.title,
-                  style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-              SizedBox(height: 2),
-              Text('${_fmt(v.views)} views  •  $watchHrs hrs  •  ${v.type}',
-                  style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurfaceVariant)),
-            ])),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: v.type == 'Short' ? context.colorScheme.tertiary.withOpacity(0.12) : _ytRed.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
+    return SizedBox(
+      height: 90,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: InkWell(
+              onTap: () => _showUpdateStatBottomSheet(context, item['key'] as String, item['value'] as String),
+              borderRadius: BorderRadius.circular(AppSizes.br16),
+              child: Ink(
+                width: 140,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: context.colorScheme.surfaceVariant.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(AppSizes.br16),
+                  border: Border.all(color: context.colorScheme.outlineVariant.withOpacity(0.5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          item['label'] as String,
+                          style: context.textTheme.labelMedium?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Icon(
+                          item['icon'] as IconData,
+                          color: context.colorScheme.primary,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                    Text(
+                      item['value'] as String,
+                      style: context.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Text(v.type,
-                  style: context.textTheme.labelSmall?.copyWith(
-                      color: v.type == 'Short' ? context.colorScheme.tertiary : _ytRed,
-                      fontWeight: FontWeight.bold)),
             ),
-          ]),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Stat Update Bottom Sheet ───────────────────────────────────────────
+  void _showUpdateStatBottomSheet(BuildContext context, String key, String currentValue) {
+    final bloc = context.read<YoutubeTrackerBloc>();
+    final ctrl = TextEditingController(text: currentValue);
+    final label = key.replaceAll('_', ' ').toUpperCase();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
+            left: ctx.screenWidth * 0.05,
+            right: ctx.screenWidth * 0.05,
+            top: ctx.screenHeight * 0.03,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: ctx.screenWidth * 0.12,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: ctx.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                SizedBox(height: ctx.screenHeight * 0.02),
+                Text(
+                  'Update $label',
+                  style: ctx.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                SizedBox(height: ctx.screenHeight * 0.025),
+                TextField(
+                  controller: ctrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'New Value',
+                    border: const OutlineInputBorder(),
+                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: ctx.colorScheme.primary)),
+                  ),
+                  autofocus: true,
+                ),
+                SizedBox(height: ctx.screenHeight * 0.03),
+                SizedBox(
+                  width: double.infinity,
+                  height: ctx.screenHeight * 0.055,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final val = ctrl.text.trim();
+                      if (val.isNotEmpty) {
+                        bloc.add(YoutubeTrackerStatUpdated(key: key, value: val));
+                        HapticFeedback.mediumImpact();
+                      }
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ctx.colorScheme.primary,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
+                    ),
+                    child: const Text('Update Stat', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _pipelineCard(BuildContext context, YoutubeVideoModel v) {
-    final Color stageColor;
-    switch (v.stage) {
-      case 'Editing': stageColor = context.colorScheme.primary; break;
-      case 'Recording': stageColor = context.colorScheme.tertiary; break;
-      default: stageColor = context.colorScheme.onSurfaceVariant;
-    }
+  // ── Content Calendar Card Builder ──────────────────────────────────────
+  Widget _buildContentCalendarCard(BuildContext context, YoutubeContentModel item) {
     return Padding(
-      padding: EdgeInsets.only(bottom: context.screenHeight * 0.012),
-      child: GestureDetector(
-        onTap: () => _showEditVideoDialog(context, v),
-        child: AppCard(
-          child: Row(children: [
-            Container(
-              width: 4, height: context.screenHeight * 0.055,
-              decoration: BoxDecoration(color: stageColor, borderRadius: BorderRadius.circular(2)),
-            ),
-            SizedBox(width: context.screenWidth * 0.035),
-            Expanded(child: Text(v.title,
-                style: context.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
-                maxLines: 1, overflow: TextOverflow.ellipsis)),
-            SizedBox(width: context.screenWidth * 0.02),
-            _stageBadge(context, v.stage, stageColor),
-          ]),
+      padding: const EdgeInsets.only(right: 12.0),
+      child: InkWell(
+        onTap: () => _showCalendarEntryOptionsBottomSheet(context, item),
+        borderRadius: BorderRadius.circular(AppSizes.br16),
+        child: Ink(
+          width: 170,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(AppSizes.br16),
+            border: Border.all(color: context.colorScheme.outlineVariant.withOpacity(0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    DateFormat('d MMM yyyy').format(DateTime.tryParse(item.targetDate) ?? DateTime.now()),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      item.status.toUpperCase(),
+                      style: context.textTheme.labelSmall?.copyWith(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _stageBadge(BuildContext context, String stage, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+  // ── Calendar Entry Options Bottom Sheet ────────────────────────────────
+  void _showCalendarEntryOptionsBottomSheet(BuildContext context, YoutubeContentModel item) {
+    final bloc = context.read<YoutubeTrackerBloc>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
       ),
-      child: Text(stage, style: context.textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.bold)),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: ctx.screenWidth * 0.05,
+            vertical: ctx.screenHeight * 0.03,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+              Center(
+                child: Container(
+                  width: ctx.screenWidth * 0.12,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: ctx.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              SizedBox(height: ctx.screenHeight * 0.02),
+              Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: ctx.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.edit_rounded, color: ctx.colorScheme.primary),
+                title: const Text('Edit Entry', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Change title or target date', style: TextStyle(color: Colors.white54)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showEditContentBottomSheet(context, item);
+                },
+              ),
+              const Divider(color: Colors.white12),
+              ListTile(
+                leading: const Icon(Icons.rocket_launch_rounded, color: Colors.orange),
+                title: const Text('Move to Production Pipeline', style: TextStyle(color: Colors.white)),
+                subtitle: const Text('Change status to Scripting', style: TextStyle(color: Colors.white54)),
+                onTap: () {
+                  final updated = item.copyWith(status: 'scripting');
+                  bloc.add(YoutubeTrackerContentUpdated(content: updated));
+                  HapticFeedback.mediumImpact();
+                  Navigator.pop(ctx);
+                },
+              ),
+              const Divider(color: Colors.white12),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded, color: ctx.colorScheme.error),
+                title: Text('Delete Entry', style: TextStyle(color: ctx.colorScheme.error)),
+                onTap: () {
+                  bloc.add(YoutubeTrackerContentDeleted(id: item.id));
+                  HapticFeedback.heavyImpact();
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        ),
+       ),
+      ),
     );
   }
 
-  String _fmt(int n) {
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
-    return '$n';
+  // ── Edit Planned Content Bottom Sheet ──────────────────────────────────
+  void _showEditContentBottomSheet(BuildContext context, YoutubeContentModel item) {
+    final bloc = context.read<YoutubeTrackerBloc>();
+    final titleCtrl = TextEditingController(text: item.title);
+    DateTime selectedDate = DateTime.tryParse(item.targetDate) ?? DateTime.now();
+    String reminderDateTime = item.reminderDateTime;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: StatefulBuilder(
+          builder: (context, setState) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
+              left: ctx.screenWidth * 0.05,
+              right: ctx.screenWidth * 0.05,
+              top: ctx.screenHeight * 0.03,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: ctx.screenWidth * 0.12,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: ctx.colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  Text(
+                    'Edit Planned Content',
+                    style: ctx.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.025),
+                  TextField(
+                    controller: titleCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Content Title', border: OutlineInputBorder()),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          selectedDate = picked;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Target Date',
+                        prefixIcon: const Icon(Icons.calendar_today_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
+                      ),
+                      child: Text(
+                        DateFormat('EEEE, d MMMM yyyy').format(selectedDate),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  const Text('Reminder Date & Time (Optional)', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final val = await _selectDateTime(ctx);
+                      if (val != null) {
+                        setState(() {
+                          reminderDateTime = val;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white24),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reminderDateTime.isEmpty ? 'Select Custom Reminder Time' : reminderDateTime,
+                              style: TextStyle(
+                                color: reminderDateTime.isEmpty ? Colors.white54 : Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          if (reminderDateTime.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  reminderDateTime = '';
+                                });
+                              },
+                              child: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                            ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.alarm_rounded, color: Colors.white54, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.03),
+                  SizedBox(
+                    width: double.infinity,
+                    height: ctx.screenHeight * 0.055,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final title = titleCtrl.text.trim();
+                        if (title.isNotEmpty) {
+                          final updated = item.copyWith(
+                            title: title,
+                            targetDate: DateFormat('yyyy-MM-dd').format(selectedDate),
+                            reminderDateTime: reminderDateTime,
+                          );
+                          bloc.add(YoutubeTrackerContentUpdated(content: updated));
+                          HapticFeedback.mediumImpact();
+                        }
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ctx.colorScheme.primary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
+                      ),
+                      child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Add Content Bottom Sheet ───────────────────────────────────────────
+  void _showAddContentBottomSheet(BuildContext context) {
+    final bloc = context.read<YoutubeTrackerBloc>();
+    final titleCtrl = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    String reminderDateTime = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: StatefulBuilder(
+          builder: (context, setState) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
+              left: ctx.screenWidth * 0.05,
+              right: ctx.screenWidth * 0.05,
+              top: ctx.screenHeight * 0.03,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: ctx.screenWidth * 0.12,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: ctx.colorScheme.outlineVariant,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  Text(
+                    'Add Planned Content',
+                    style: ctx.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.025),
+                  TextField(
+                    controller: titleCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Content Title', border: OutlineInputBorder()),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          selectedDate = picked;
+                        });
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Target Upload Date',
+                        prefixIcon: const Icon(Icons.calendar_today_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
+                      ),
+                      child: Text(
+                        DateFormat('EEEE, d MMMM yyyy').format(selectedDate),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  const Text('Reminder Date & Time (Optional)', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final val = await _selectDateTime(ctx);
+                      if (val != null) {
+                        setState(() {
+                          reminderDateTime = val;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white24),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reminderDateTime.isEmpty ? 'Select Custom Reminder Time' : reminderDateTime,
+                              style: TextStyle(
+                                color: reminderDateTime.isEmpty ? Colors.white54 : Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          if (reminderDateTime.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  reminderDateTime = '';
+                                });
+                              },
+                              child: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                            ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.alarm_rounded, color: Colors.white54, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ctx.screenHeight * 0.03),
+                  SizedBox(
+                    width: double.infinity,
+                    height: ctx.screenHeight * 0.055,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final title = titleCtrl.text.trim();
+                        if (title.isNotEmpty) {
+                          bloc.add(YoutubeTrackerContentAdded(
+                            title: title,
+                            targetDate: DateFormat('yyyy-MM-dd').format(selectedDate),
+                            reminderDateTime: reminderDateTime,
+                          ));
+                          HapticFeedback.mediumImpact();
+                        }
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ctx.colorScheme.primary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.br12)),
+                      ),
+                      child: const Text('Add to Calendar', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Production Pipeline Card Builder ───────────────────────────────────
+  Widget _buildProductionPipelineCard(BuildContext context, YoutubeContentModel item) {
+    Color chipColor;
+    switch (item.status) {
+      case 'scripting':
+        chipColor = Colors.blue;
+        break;
+      case 'filming':
+        chipColor = Colors.orange;
+        break;
+      case 'editing':
+        chipColor = Colors.purple;
+        break;
+      case 'thumbnail':
+        chipColor = Colors.teal;
+        break;
+      default:
+        chipColor = Colors.white24;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 12.0),
+      child: InkWell(
+        onTap: () => _showPipelineEntryOptionsBottomSheet(context, item),
+        borderRadius: BorderRadius.circular(AppSizes.br16),
+        child: Ink(
+          width: 170,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: context.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(AppSizes.br16),
+            border: Border.all(color: context.colorScheme.outlineVariant.withOpacity(0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                item.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    DateFormat('d MMM yyyy').format(DateTime.tryParse(item.targetDate) ?? DateTime.now()),
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: chipColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: chipColor.withOpacity(0.5)),
+                    ),
+                    child: Text(
+                      item.status.toUpperCase(),
+                      style: context.textTheme.labelSmall?.copyWith(
+                        color: chipColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Production Pipeline Options Bottom Sheet ───────────────────────────
+  void _showPipelineEntryOptionsBottomSheet(BuildContext context, YoutubeContentModel item) {
+    final bloc = context.read<YoutubeTrackerBloc>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: ctx.screenWidth * 0.05,
+            vertical: ctx.screenHeight * 0.03,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: ctx.screenWidth * 0.12,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: ctx.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                SizedBox(height: ctx.screenHeight * 0.02),
+                Text(
+                  'Pipeline Progress: ${item.title}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ctx.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Change Stage',
+                  style: ctx.textTheme.labelMedium?.copyWith(
+                    color: ctx.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  leading: const Icon(Icons.description_rounded, color: Colors.blue),
+                  title: const Text('Scripting', style: TextStyle(color: Colors.white)),
+                  trailing: item.status == 'scripting' ? const Icon(Icons.check_circle_rounded, color: Colors.blue) : null,
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentUpdated(content: item.copyWith(status: 'scripting')));
+                    Navigator.pop(ctx);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.videocam_rounded, color: Colors.orange),
+                  title: const Text('Filming', style: TextStyle(color: Colors.white)),
+                  trailing: item.status == 'filming' ? const Icon(Icons.check_circle_rounded, color: Colors.orange) : null,
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentUpdated(content: item.copyWith(status: 'filming')));
+                    Navigator.pop(ctx);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.movie_filter_rounded, color: Colors.purple),
+                  title: const Text('Editing', style: TextStyle(color: Colors.white)),
+                  trailing: item.status == 'editing' ? const Icon(Icons.check_circle_rounded, color: Colors.purple) : null,
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentUpdated(content: item.copyWith(status: 'editing')));
+                    Navigator.pop(ctx);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.image_rounded, color: Colors.teal),
+                  title: const Text('Thumbnail', style: TextStyle(color: Colors.white)),
+                  trailing: item.status == 'thumbnail' ? const Icon(Icons.check_circle_rounded, color: Colors.teal) : null,
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentUpdated(content: item.copyWith(status: 'thumbnail')));
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const Divider(color: Colors.white12),
+                ListTile(
+                  leading: const Icon(Icons.check_circle_rounded, color: Colors.green),
+                  title: const Text('Mark as Published', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Move to Published Videos', style: TextStyle(color: Colors.white54)),
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentUpdated(
+                      content: item.copyWith(
+                        status: 'published',
+                        publishedAt: DateTime.now(),
+                      ),
+                    ));
+                    HapticFeedback.mediumImpact();
+                    Navigator.pop(ctx);
+                  },
+                ),
+                const Divider(color: Colors.white12),
+                ListTile(
+                  leading: Icon(Icons.delete_outline_rounded, color: ctx.colorScheme.error),
+                  title: Text('Delete Video', style: TextStyle(color: ctx.colorScheme.error)),
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentDeleted(id: item.id));
+                    HapticFeedback.heavyImpact();
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Published Video Tile Builder ───────────────────────────────────────
+  Widget _buildPublishedVideoTile(BuildContext context, YoutubeContentModel item) {
+    final pubDate = item.publishedAt ?? item.createdAt;
+    final formattedDate = DateFormat('dd MMM yyyy • hh:mm a').format(pubDate);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: InkWell(
+        onTap: () => _showPublishedOptionsBottomSheet(context, item),
+        borderRadius: BorderRadius.circular(AppSizes.br16),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(AppSizes.br16),
+            border: Border.all(color: context.colorScheme.outlineVariant.withOpacity(0.5)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: Colors.green,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, size: 12, color: Colors.white54),
+                        const SizedBox(width: 4),
+                        Text(
+                          formattedDate,
+                          style: context.textTheme.bodySmall?.copyWith(color: Colors.white54),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.withOpacity(0.5)),
+                ),
+                child: Text(
+                  'PUBLISHED',
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Published Video Options Bottom Sheet ───────────────────────────────
+  void _showPublishedOptionsBottomSheet(BuildContext context, YoutubeContentModel item) {
+    final bloc = context.read<YoutubeTrackerBloc>();
+    final pubDate = item.publishedAt ?? item.createdAt;
+    final formattedDate = DateFormat('dd MMM yyyy • hh:mm a').format(pubDate);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
+      ),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: ctx.screenWidth * 0.05,
+            vertical: ctx.screenHeight * 0.03,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: ctx.screenWidth * 0.12,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: ctx.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                SizedBox(height: ctx.screenHeight * 0.02),
+                Text(
+                  'Published Video Details',
+                  style: ctx.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                Text('Title:', style: ctx.textTheme.labelSmall?.copyWith(color: ctx.colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Text(
+                  item.title,
+                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Text('Published On:', style: ctx.textTheme.labelSmall?.copyWith(color: ctx.colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Text(
+                  formattedDate,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                const Divider(color: Colors.white12),
+                ListTile(
+                  leading: Icon(Icons.delete_outline_rounded, color: ctx.colorScheme.error),
+                  title: Text('Delete Video Entry', style: TextStyle(color: ctx.colorScheme.error)),
+                  onTap: () {
+                    bloc.add(YoutubeTrackerContentDeleted(id: item.id));
+                    HapticFeedback.heavyImpact();
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

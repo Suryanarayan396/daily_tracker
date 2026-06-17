@@ -30,3 +30,11 @@ final class DashboardHitToggled extends DashboardEvent {
 final class DashboardInsightRotated extends DashboardEvent {
   const DashboardInsightRotated();
 }
+
+final class DashboardTargetSalaryUpdated extends DashboardEvent {
+  final double target;
+  const DashboardTargetSalaryUpdated(this.target);
+
+  @override
+  List<Object?> get props => [target];
+}

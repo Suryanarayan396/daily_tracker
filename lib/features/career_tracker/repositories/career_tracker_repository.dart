@@ -11,8 +11,12 @@ abstract class CareerTrackerRepository {
     required bool recruiterContacted,
     String interviewDate = '',
     String notes = '',
+    String reminderDateTime = '',
   });
   Future<void> updateStatus(int id, String status);
   Future<void> updateApplication(CareerTrackerModel model);
   Future<void> deleteApplication(int id);
+  Future<List<CareerStatusHistoryModel>> getStatusHistory(int applicationId);
+  Future<void> updateSalaryTargets(double currentSalary, double targetSalary);
+  Future<Map<String, double>> getSalaryTargets();
 }

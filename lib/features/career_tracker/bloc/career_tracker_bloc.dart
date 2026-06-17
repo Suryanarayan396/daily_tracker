@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../models/career_tracker_model.dart';
 import '../repositories/career_tracker_repository.dart';
 import 'career_tracker_event.dart';
 import 'career_tracker_state.dart';
@@ -30,7 +31,13 @@ class CareerTrackerBloc extends Bloc<CareerTrackerEvent, CareerTrackerState> {
     emit(state.copyWith(isLoading: true, errorMessage: null));
     try {
       final apps = await _repository.getAllApplications();
-      emit(state.copyWith(isLoading: false, applications: apps));
+      final targets = await _repository.getSalaryTargets();
+      emit(state.copyWith(
+        isLoading: false,
+        applications: apps,
+        currentSalary: targets['currentSalary'] ?? 0.0,
+        targetSalary: targets['targetSalary'] ?? 0.0,
+      ));
     } catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
     }
@@ -42,7 +49,12 @@ class CareerTrackerBloc extends Bloc<CareerTrackerEvent, CareerTrackerState> {
   ) async {
     try {
       final apps = await _repository.getAllApplications();
-      emit(state.copyWith(applications: apps));
+      final targets = await _repository.getSalaryTargets();
+      emit(state.copyWith(
+        applications: apps,
+        currentSalary: targets['currentSalary'] ?? 0.0,
+        targetSalary: targets['targetSalary'] ?? 0.0,
+      ));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -61,6 +73,7 @@ class CareerTrackerBloc extends Bloc<CareerTrackerEvent, CareerTrackerState> {
         recruiterContacted: event.recruiterContacted,
         interviewDate: event.interviewDate,
         notes: event.notes,
+        reminderDateTime: event.reminderDateTime,
       );
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
@@ -104,10 +117,19 @@ class CareerTrackerBloc extends Bloc<CareerTrackerEvent, CareerTrackerState> {
     CareerTrackerSalaryTargetsUpdated event,
     Emitter<CareerTrackerState> emit,
   ) async {
-    emit(state.copyWith(
-      currentSalary: event.currentSalary,
-      targetSalary: event.targetSalary,
-    ));
+    try {
+      await _repository.updateSalaryTargets(event.currentSalary, event.targetSalary);
+      emit(state.copyWith(
+        currentSalary: event.currentSalary,
+        targetSalary: event.targetSalary,
+      ));
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<List<CareerStatusHistoryModel>> getStatusHistory(int applicationId) {
+    return _repository.getStatusHistory(applicationId);
   }
 
   @override

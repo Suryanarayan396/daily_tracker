@@ -1,128 +1,53 @@
 import 'package:equatable/equatable.dart';
 
-class YoutubeSettingsModel extends Equatable {
-  final int id;
-  final int subscribers;
-
-  const YoutubeSettingsModel({
-    this.id = 1,
-    required this.subscribers,
-  });
-
-  YoutubeSettingsModel copyWith({
-    int? id,
-    int? subscribers,
-  }) {
-    return YoutubeSettingsModel(
-      id: id ?? this.id,
-      subscribers: subscribers ?? this.subscribers,
-    );
-  }
-
-  factory YoutubeSettingsModel.fromJson(Map<String, dynamic> json) {
-    return YoutubeSettingsModel(
-      id: json['id'] as int? ?? 1,
-      subscribers: json['subscribers'] as int? ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'subscribers': subscribers,
-    };
-  }
-
-  factory YoutubeSettingsModel.fromMap(Map<String, dynamic> map) {
-    return YoutubeSettingsModel(
-      id: map['id'] as int? ?? 1,
-      subscribers: map['subscribers'] as int? ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'subscribers': subscribers,
-    };
-  }
-
-  @override
-  List<Object?> get props => [id, subscribers];
-}
-
-class YoutubeVideoModel extends Equatable {
+class YoutubeContentModel extends Equatable {
   final int id;
   final String title;
-  final String type;
-  final String stage;
-  final int views;
-  final int watchTimeMinutes;
+  final String targetDate; // yyyy-MM-dd
+  final String status; // 'planned' | 'scripting' | 'filming' | 'editing' | 'thumbnail' | 'published'
+  final DateTime? publishedAt;
   final DateTime createdAt;
+  final String reminderDateTime;
 
-  const YoutubeVideoModel({
+  const YoutubeContentModel({
     required this.id,
     required this.title,
-    required this.type,
-    required this.stage,
-    required this.views,
-    required this.watchTimeMinutes,
+    required this.targetDate,
+    required this.status,
+    this.publishedAt,
     required this.createdAt,
+    this.reminderDateTime = '',
   });
 
-  YoutubeVideoModel copyWith({
+  YoutubeContentModel copyWith({
     int? id,
     String? title,
-    String? type,
-    String? stage,
-    int? views,
-    int? watchTimeMinutes,
+    String? targetDate,
+    String? status,
+    DateTime? publishedAt,
     DateTime? createdAt,
+    String? reminderDateTime,
   }) {
-    return YoutubeVideoModel(
+    return YoutubeContentModel(
       id: id ?? this.id,
       title: title ?? this.title,
-      type: type ?? this.type,
-      stage: stage ?? this.stage,
-      views: views ?? this.views,
-      watchTimeMinutes: watchTimeMinutes ?? this.watchTimeMinutes,
+      targetDate: targetDate ?? this.targetDate,
+      status: status ?? this.status,
+      publishedAt: publishedAt ?? this.publishedAt,
       createdAt: createdAt ?? this.createdAt,
+      reminderDateTime: reminderDateTime ?? this.reminderDateTime,
     );
   }
 
-  factory YoutubeVideoModel.fromJson(Map<String, dynamic> json) {
-    return YoutubeVideoModel(
-      id: json['id'] as int? ?? 0,
-      title: json['title'] as String? ?? '',
-      type: json['type'] as String? ?? '',
-      stage: json['stage'] as String? ?? '',
-      views: json['views'] as int? ?? 0,
-      watchTimeMinutes: json['watch_time_minutes'] as int? ?? 0,
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'type': type,
-      'stage': stage,
-      'views': views,
-      'watch_time_minutes': watchTimeMinutes,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
-
-  factory YoutubeVideoModel.fromMap(Map<String, dynamic> map) {
-    return YoutubeVideoModel(
+  factory YoutubeContentModel.fromMap(Map<String, dynamic> map) {
+    return YoutubeContentModel(
       id: map['id'] as int? ?? 0,
       title: map['title'] as String? ?? '',
-      type: map['type'] as String? ?? '',
-      stage: map['stage'] as String? ?? '',
-      views: map['views'] as int? ?? 0,
-      watchTimeMinutes: map['watchTimeMinutes'] as int? ?? 0,
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      targetDate: map['target_date'] as String? ?? '',
+      status: map['status'] as String? ?? 'planned',
+      publishedAt: map['published_at'] != null ? DateTime.tryParse(map['published_at'] as String) : null,
+      createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now(),
+      reminderDateTime: map['reminderDateTime'] as String? ?? '',
     );
   }
 
@@ -130,89 +55,49 @@ class YoutubeVideoModel extends Equatable {
     return {
       if (id != 0) 'id': id,
       'title': title,
-      'type': type,
-      'stage': stage,
-      'views': views,
-      'watchTimeMinutes': watchTimeMinutes,
-      'createdAt': createdAt.toIso8601String(),
+      'target_date': targetDate,
+      'status': status,
+      'published_at': publishedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'reminderDateTime': reminderDateTime,
     };
   }
 
   @override
-  List<Object?> get props => [id, title, type, stage, views, watchTimeMinutes, createdAt];
+  List<Object?> get props => [id, title, targetDate, status, publishedAt, createdAt, reminderDateTime];
 }
 
-class ContentCalendarEntryModel extends Equatable {
-  final int id;
-  final String title;
-  final String type;
-  final DateTime scheduledDate;
-  final bool isPublished;
+class YoutubeChannelStatsModel extends Equatable {
+  final String subscribers;
+  final String totalViews;
+  final String totalVideos;
+  final String watchHours;
+  final String monthlyRevenue;
 
-  const ContentCalendarEntryModel({
-    required this.id,
-    required this.title,
-    required this.type,
-    required this.scheduledDate,
-    required this.isPublished,
+  const YoutubeChannelStatsModel({
+    this.subscribers = '0',
+    this.totalViews = '0',
+    this.totalVideos = '0',
+    this.watchHours = '0',
+    this.monthlyRevenue = '0',
   });
 
-  ContentCalendarEntryModel copyWith({
-    int? id,
-    String? title,
-    String? type,
-    DateTime? scheduledDate,
-    bool? isPublished,
+  YoutubeChannelStatsModel copyWith({
+    String? subscribers,
+    String? totalViews,
+    String? totalVideos,
+    String? watchHours,
+    String? monthlyRevenue,
   }) {
-    return ContentCalendarEntryModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      type: type ?? this.type,
-      scheduledDate: scheduledDate ?? this.scheduledDate,
-      isPublished: isPublished ?? this.isPublished,
+    return YoutubeChannelStatsModel(
+      subscribers: subscribers ?? this.subscribers,
+      totalViews: totalViews ?? this.totalViews,
+      totalVideos: totalVideos ?? this.totalVideos,
+      watchHours: watchHours ?? this.watchHours,
+      monthlyRevenue: monthlyRevenue ?? this.monthlyRevenue,
     );
-  }
-
-  factory ContentCalendarEntryModel.fromJson(Map<String, dynamic> json) {
-    return ContentCalendarEntryModel(
-      id: json['id'] as int? ?? 0,
-      title: json['title'] as String? ?? '',
-      type: json['type'] as String? ?? '',
-      scheduledDate: DateTime.tryParse(json['scheduled_date'] as String? ?? '') ?? DateTime.now(),
-      isPublished: json['is_published'] as bool? ?? false,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'type': type,
-      'scheduled_date': scheduledDate.toIso8601String(),
-      'is_published': isPublished,
-    };
-  }
-
-  factory ContentCalendarEntryModel.fromMap(Map<String, dynamic> map) {
-    return ContentCalendarEntryModel(
-      id: map['id'] as int? ?? 0,
-      title: map['title'] as String? ?? '',
-      type: map['type'] as String? ?? '',
-      scheduledDate: DateTime.tryParse(map['scheduledDate'] as String? ?? '') ?? DateTime.now(),
-      isPublished: (map['isPublished'] as int? ?? 0) == 1,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      if (id != 0) 'id': id,
-      'title': title,
-      'type': type,
-      'scheduledDate': scheduledDate.toIso8601String(),
-      'isPublished': isPublished ? 1 : 0,
-    };
   }
 
   @override
-  List<Object?> get props => [id, title, type, scheduledDate, isPublished];
+  List<Object?> get props => [subscribers, totalViews, totalVideos, watchHours, monthlyRevenue];
 }

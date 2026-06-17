@@ -134,23 +134,31 @@ class FinanceSettingsModel extends Equatable {
 class ExpenseItemModel extends Equatable {
   final int id;
   final String category;
+  final String description;
   final double amount;
+  final DateTime date;
 
   const ExpenseItemModel({
     required this.id,
     required this.category,
+    required this.description,
     required this.amount,
+    required this.date,
   });
 
   ExpenseItemModel copyWith({
     int? id,
     String? category,
+    String? description,
     double? amount,
+    DateTime? date,
   }) {
     return ExpenseItemModel(
       id: id ?? this.id,
       category: category ?? this.category,
+      description: description ?? this.description,
       amount: amount ?? this.amount,
+      date: date ?? this.date,
     );
   }
 
@@ -158,7 +166,9 @@ class ExpenseItemModel extends Equatable {
     return ExpenseItemModel(
       id: json['id'] as int? ?? 0,
       category: json['category'] as String? ?? '',
+      description: json['description'] as String? ?? '',
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
     );
   }
 
@@ -166,7 +176,9 @@ class ExpenseItemModel extends Equatable {
     return {
       'id': id,
       'category': category,
+      'description': description,
       'amount': amount,
+      'date': date.toIso8601String(),
     };
   }
 
@@ -174,8 +186,9 @@ class ExpenseItemModel extends Equatable {
     return {
       if (id != 0) 'id': id,
       'category': category,
+      'description': description,
       'amount': amount,
-      'date': DateTime.now().toIso8601String(),
+      'date': date.toIso8601String(),
     };
   }
 
@@ -183,10 +196,12 @@ class ExpenseItemModel extends Equatable {
     return ExpenseItemModel(
       id: map['id'] as int? ?? 0,
       category: map['category'] as String? ?? '',
+      description: map['description'] as String? ?? '',
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      date: DateTime.tryParse(map['date'] as String? ?? '') ?? DateTime.now(),
     );
   }
 
   @override
-  List<Object?> get props => [id, category, amount];
+  List<Object?> get props => [id, category, description, amount, date];
 }

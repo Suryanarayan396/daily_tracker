@@ -16,80 +16,44 @@ final class YoutubeTrackerRefreshRequested extends YoutubeTrackerEvent {
   const YoutubeTrackerRefreshRequested();
 }
 
-final class YoutubeTrackerSubscribersUpdated extends YoutubeTrackerEvent {
-  final int subscribers;
+final class YoutubeTrackerStatUpdated extends YoutubeTrackerEvent {
+  final String key;
+  final String value;
 
-  const YoutubeTrackerSubscribersUpdated({required this.subscribers});
+  const YoutubeTrackerStatUpdated({required this.key, required this.value});
 
   @override
-  List<Object?> get props => [subscribers];
+  List<Object?> get props => [key, value];
 }
 
-final class YoutubeTrackerVideoAdded extends YoutubeTrackerEvent {
+final class YoutubeTrackerContentAdded extends YoutubeTrackerEvent {
   final String title;
-  final String type;
-  final String stage;
-  final int views;
-  final int watchTimeMinutes;
+  final String targetDate;
+  final String reminderDateTime;
 
-  const YoutubeTrackerVideoAdded({
+  const YoutubeTrackerContentAdded({
     required this.title,
-    required this.type,
-    required this.stage,
-    required this.views,
-    required this.watchTimeMinutes,
+    required this.targetDate,
+    this.reminderDateTime = '',
   });
 
   @override
-  List<Object?> get props => [title, type, stage, views, watchTimeMinutes];
+  List<Object?> get props => [title, targetDate, reminderDateTime];
 }
 
-final class YoutubeTrackerVideoUpdated extends YoutubeTrackerEvent {
-  final YoutubeVideoModel model;
+final class YoutubeTrackerContentUpdated extends YoutubeTrackerEvent {
+  final YoutubeContentModel content;
 
-  const YoutubeTrackerVideoUpdated({required this.model});
+  const YoutubeTrackerContentUpdated({required this.content});
 
   @override
-  List<Object?> get props => [model];
+  List<Object?> get props => [content];
 }
 
-final class YoutubeTrackerVideoDeleted extends YoutubeTrackerEvent {
+final class YoutubeTrackerContentDeleted extends YoutubeTrackerEvent {
   final int id;
 
-  const YoutubeTrackerVideoDeleted({required this.id});
-
-  @override
-  List<Object?> get props => [id];
-}
-
-final class YoutubeTrackerCalendarEntryAdded extends YoutubeTrackerEvent {
-  final String title;
-  final String type;
-  final DateTime scheduledDate;
-
-  const YoutubeTrackerCalendarEntryAdded({
-    required this.title,
-    required this.type,
-    required this.scheduledDate,
-  });
-
-  @override
-  List<Object?> get props => [title, type, scheduledDate];
-}
-
-final class YoutubeTrackerCalendarEntryToggled extends YoutubeTrackerEvent {
-  final int id;
-
-  const YoutubeTrackerCalendarEntryToggled({required this.id});
-
-  @override
-  List<Object?> get props => [id];
-}
-
-final class YoutubeTrackerCalendarEntryDeleted extends YoutubeTrackerEvent {
-  final int id;
-
-  const YoutubeTrackerCalendarEntryDeleted({required this.id});
+  const YoutubeTrackerContentDeleted({required this.id});
 
   @override
   List<Object?> get props => [id];

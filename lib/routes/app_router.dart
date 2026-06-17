@@ -14,11 +14,18 @@ import '../features/youtube_tracker/bloc/youtube_tracker_event.dart';
 import '../features/youtube_tracker/repositories/youtube_tracker_repository_impl.dart';
 import '../shared/widgets/main_navigation_page.dart';
 
+import '../features/splash/views/splash_page.dart';
+
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
+      name: 'splash',
+      builder: (context, state) => const SplashPage(),
+    ),
+    GoRoute(
+      path: '/home',
       name: 'home',
       builder: (context, state) {
         return MultiBlocProvider(

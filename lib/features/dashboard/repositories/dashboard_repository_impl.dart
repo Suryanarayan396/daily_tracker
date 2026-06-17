@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../core/services/sqlite_service.dart';
 import '../../finance_tracker/models/finance_tracker_model.dart';
@@ -19,14 +20,14 @@ class DashboardRepositoryImpl implements DashboardRepository {
     if (maps.isEmpty) {
       final settings = DashboardSettingsModel(
         id: 1,
-        welcomeMessage: "Hello, Ambitious Developer!",
-        dailyMission: "Optimize the 20% that drives 80% of your career growth.",
-        streakDays: 5,
-        dailyScore: 85,
-        highestImpactTask: "Design LifeOS component architecture",
+        welcomeMessage: 'Good morning, Champ! Time to level up.',
+        dailyMission: 'Complete your Pareto H.I.T. today to keep up your momentum.',
+        streakDays: 0,
+        dailyScore: 0,
+        highestImpactTask: '',
         isHitCompleted: false,
         currentLawInsight: "Work expands to fill the time available. Set a 2-hour deadline for your next coding session. (Parkinson's Law)",
-        targetSalary: 120000.0,
+        targetSalary: 0.0,
       );
 
       await _db.insert(
@@ -44,8 +45,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
   Future<DashboardModel> getDashboardData() async {
     final settings = await _getSettings();
 
-    // Query other tables
-    // 1. Finance Settings
+    // Query Finance Settings
     final financeMaps = await _db.query(
       'finance_settings',
       where: 'id = ?',
@@ -53,43 +53,113 @@ class DashboardRepositoryImpl implements DashboardRepository {
     );
     final finance = financeMaps.isNotEmpty ? FinanceSettingsModel.fromMap(financeMaps.first) : null;
 
-    // 2. Career apps count
-    final careerCountResult = await _db.rawQuery('SELECT COUNT(*) FROM job_applications');
-    final careerAppsCount = Sqflite.firstIntValue(careerCountResult) ?? 0;
+    // 1. Career Tracker Data
+    final totalAppsResult = await _db.rawQuery('SELECT COUNT(*) FROM job_applications');
+    final totalApplications = Sqflite.firstIntValue(totalAppsResult) ?? 0;
 
-    // 3. Youtube videos count where stage = 'Published' and type = 'Long'
-    final youtubeCountResult = await _db.rawQuery(
-      "SELECT COUNT(*) FROM youtube_videos WHERE stage = ? AND type = ?",
-      ['Published', 'Long'],
+    final interviewList = await _db.query(
+      'job_applications',
+      where: "status = 'Interview Scheduled' AND interviewDate != ''",
     );
-    final youtubeVideosCount = Sqflite.firstIntValue(youtubeCountResult) ?? 0;
+    Map<String, dynamic>? upcomingInterview;
+    if (interviewList.isNotEmpty) {
+      final mutableList = List<Map<String, dynamic>>.from(interviewList);
+      mutableList.sort((a, b) {
+        try {
+          final dateA = DateFormat('dd MMM yyyy • hh:mm a').parse(a['interviewDate'] as String);
+          final dateB = DateFormat('dd MMM yyyy • hh:mm a').parse(b['interviewDate'] as String);
+          return dateA.compareTo(dateB);
+        } catch (_) {
+          return (a['interviewDate'] as String).compareTo(b['interviewDate'] as String);
+        }
+      });
+      upcomingInterview = {
+        'company': mutableList.first['company'],
+        'role': mutableList.first['role'],
+        'interviewDate': mutableList.first['interviewDate'],
+      };
+    }
+
+    final statusList = await _db.rawQuery(
+      'SELECT status, COUNT(*) as cnt FROM job_applications GROUP BY status'
+    );
+    final statusCounts = {
+      'Recruiter': 0,
+      'Interview Scheduled': 0,
+      'Interview Done': 0,
+      'Offer': 0,
+      'Rejected': 0,
+    };
+    for (final r in statusList) {
+      final statusStr = r['status'] as String?;
+      final countVal = r['cnt'] as int? ?? 0;
+      if (statusStr != null && statusCounts.containsKey(statusStr)) {
+        statusCounts[statusStr] = countVal;
+      }
+    }
+
+    // 2. Finance Tracker Data (Balance calculation)
+    final now = DateTime.now();
+    final currentMonthStr = "${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}";
+    final expensesSumResult = await _db.rawQuery(
+      "SELECT SUM(amount) FROM expense_items WHERE SUBSTR(date, 1, 7) = ?",
+      [currentMonthStr],
+    );
+    final monthlyExpenses = (expensesSumResult.first.values.first as num?)?.toDouble() ?? 0.0;
+    final balance = (finance?.salary ?? 0.0) - monthlyExpenses;
+
+    // 3. YouTube Tracker Data
+    final youtubeTotalResult = await _db.rawQuery('SELECT COUNT(*) FROM content');
+    final youtubeTotalContent = Sqflite.firstIntValue(youtubeTotalResult) ?? 0;
+
+    final youtubePublishedResult = await _db.rawQuery(
+      "SELECT COUNT(*) FROM content WHERE status = ?",
+      ['published'],
+    );
+    final youtubePublishedContent = Sqflite.firstIntValue(youtubePublishedResult) ?? 0;
+
+    final upcomingContentList = await _db.query(
+      'content',
+      where: "status != 'published'",
+      orderBy: 'target_date ASC',
+      limit: 1,
+    );
+    Map<String, dynamic>? upcomingContent;
+    if (upcomingContentList.isNotEmpty) {
+      upcomingContent = {
+        'title': upcomingContentList.first['title'],
+        'target_date': upcomingContentList.first['target_date'],
+        'status': upcomingContentList.first['status'],
+      };
+    }
 
     return DashboardModel(
-      welcomeMessage: settings.welcomeMessage,
-      dailyMission: settings.dailyMission,
-      streakDays: settings.streakDays,
-      dailyScore: settings.dailyScore,
-      highestImpactTask: settings.highestImpactTask,
-      isHitCompleted: settings.isHitCompleted,
-      currentLawInsight: settings.currentLawInsight,
-      currentSalary: finance?.salary ?? 75000.0,
+      username: "Surya Narayanan",
+      currentSalary: finance?.salary ?? 0.0,
       targetSalary: settings.targetSalary,
-      debt: finance?.debt ?? 45000.0,
-      emergencyFund: finance?.emergencyFund ?? 120000.0,
-      careerApplicationsCount: careerAppsCount,
-      youtubeVideosUploadedCount: youtubeVideosCount,
+      totalApplications: totalApplications,
+      upcomingInterview: upcomingInterview,
+      statusCounts: statusCounts,
+      balance: balance,
+      emergencyFund: finance?.emergencyFund ?? 0.0,
+      savings: finance?.savings ?? 0.0,
+      youtubeTotalContent: youtubeTotalContent,
+      youtubePublishedContent: youtubePublishedContent,
+      upcomingContent: upcomingContent,
     );
   }
 
   @override
   Future<void> updateHit(String task) async {
     final settings = await _getSettings();
-    settings.highestImpactTask = task;
-    settings.isHitCompleted = false;
+    final updated = settings.copyWith(
+      highestImpactTask: task,
+      isHitCompleted: false,
+    );
 
     await _db.update(
       'dashboard_settings',
-      settings.toMap(),
+      updated.toMap(),
       where: 'id = ?',
       whereArgs: [1],
     );
@@ -99,14 +169,14 @@ class DashboardRepositoryImpl implements DashboardRepository {
   @override
   Future<void> toggleHit() async {
     final settings = await _getSettings();
-    settings.isHitCompleted = !settings.isHitCompleted;
-    settings.dailyScore = settings.isHitCompleted
-        ? (settings.dailyScore + 15).clamp(0, 100)
-        : (settings.dailyScore - 15).clamp(0, 100);
+    final newIsHitCompleted = !settings.isHitCompleted;
+    final updated = settings.copyWith(
+      isHitCompleted: newIsHitCompleted,
+    );
 
     await _db.update(
       'dashboard_settings',
-      settings.toMap(),
+      updated.toMap(),
       where: 'id = ?',
       whereArgs: [1],
     );
@@ -126,14 +196,33 @@ class DashboardRepositoryImpl implements DashboardRepository {
       "In a hierarchy, people rise to their level of incompetence. Switch from passive reading to coding to keep growing. (Peter Principle)",
     ];
     final idx = insights.indexOf(settings.currentLawInsight);
-    settings.currentLawInsight = insights[(idx + 1) % insights.length];
+    final updatedInsight = insights[(idx + 1) % insights.length];
+    final updated = settings.copyWith(currentLawInsight: updatedInsight);
 
     await _db.update(
       'dashboard_settings',
-      settings.toMap(),
+      updated.toMap(),
       where: 'id = ?',
       whereArgs: [1],
     );
     SqliteService.notify('dashboard_settings');
+  }
+
+  @override
+  Future<void> updateTargetSalary(double target) async {
+    final settings = await _getSettings();
+    final updated = settings.copyWith(targetSalary: target);
+    await _db.update(
+      'dashboard_settings',
+      updated.toMap(),
+      where: 'id = ?',
+      whereArgs: [1],
+    );
+    SqliteService.notify('dashboard_settings');
+  }
+
+  @override
+  Stream<String> watchChanges() {
+    return SqliteService.changeStream;
   }
 }

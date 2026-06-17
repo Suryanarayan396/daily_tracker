@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,20 +14,20 @@ import '../bloc/dashboard_state.dart';
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  void _showEditHitDialog(BuildContext context, String currentHit) {
-    final hitCtrl = TextEditingController(text: currentHit);
+  void _showEditTargetSalaryDialog(BuildContext context, double currentTarget) {
+    final ctrl = TextEditingController(text: currentTarget.toInt().toString());
     showDialog(
       context: context,
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: ctx.colorScheme.surface,
-          title: const Text('Update Highest Impact Task', style: TextStyle(color: Colors.white)),
+          title: const Text('Update Target Salary', style: TextStyle(color: Colors.white)),
           content: TextField(
-            controller: hitCtrl,
+            controller: ctrl,
+            keyboardType: TextInputType.number,
             style: const TextStyle(color: Colors.white),
-            maxLines: 2,
             decoration: const InputDecoration(
-              labelText: 'HIT (Pareto Principle)',
+              labelText: 'Target Salary (₹/mo)',
               border: OutlineInputBorder(),
             ),
           ),
@@ -37,12 +38,10 @@ class DashboardPage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                final task = hitCtrl.text.trim();
-                if (task.isNotEmpty) {
-                  context.read<DashboardBloc>().add(DashboardHitUpdated(task));
-                  HapticFeedback.mediumImpact();
-                  Navigator.pop(ctx);
-                }
+                final target = double.tryParse(ctrl.text.trim()) ?? 0.0;
+                context.read<DashboardBloc>().add(DashboardTargetSalaryUpdated(target));
+                HapticFeedback.mediumImpact();
+                Navigator.pop(ctx);
               },
               child: const Text('Update'),
             ),
@@ -96,117 +95,213 @@ class DashboardPage extends StatelessWidget {
             return const AppLoader();
           }
           final loaded = state.data!;
-            final salaryPercent = loaded.targetSalary > 0
-                ? (loaded.currentSalary / loaded.targetSalary).clamp(0.0, 1.0)
-                : 0.0;
-            final careerPercent = (loaded.careerApplicationsCount / 5.0).clamp(0.0, 1.0);
-            final youtubePercent = (loaded.youtubeVideosUploadedCount / 4.0).clamp(0.0, 1.0);
 
-            Color scoreColor = context.colorScheme.error;
-            String scoreStatus = "Action Needed";
-            if (loaded.dailyScore >= 80) {
-              scoreColor = context.colorScheme.secondary;
-              scoreStatus = "Optimal Growth";
-            } else if (loaded.dailyScore >= 50) {
-              scoreColor = context.colorScheme.tertiary;
-              scoreStatus = "Moderate Progress";
-            }
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.symmetric(
+                horizontal: context.screenWidth * 0.05,
+                vertical: context.screenHeight * 0.02,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: context.screenHeight * 0.01),
+                  
+                  // ── Top Header: Clock time & Username ──────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trillionaire Life Dashboard',
+                            style: context.textTheme.titleSmall?.copyWith(
+                              color: context.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          Text(
+                            loaded.username,
+                            style: context.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const _ClockWidget(),
+                    ],
+                  ),
+                  SizedBox(height: context.screenHeight * 0.03),
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<DashboardBloc>().add(const DashboardRefreshRequested());
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.screenWidth * 0.05,
-                  vertical: context.screenHeight * 0.02,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: context.screenHeight * 0.01),
-                    // Top welcome row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'LifeOS Dashboard',
-                              style: context.textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              loaded.welcomeMessage,
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                color: context.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
+                  // ── Career Tracker Section ─────────────────────────────────
+                  _buildSectionHeader(context, '💼 Career Tracker'),
+                  SizedBox(height: context.screenHeight * 0.015),
+                  
+                  // 1. Current Salary & Target Salary Tile
+                  GestureDetector(
+                    onTap: () => _showEditTargetSalaryDialog(context, loaded.targetSalary),
+                    child: Container(
+                      padding: EdgeInsets.all(context.screenWidth * 0.04),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            context.colorScheme.primary.withOpacity(0.12),
+                            context.colorScheme.surface,
                           ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        // Daily Streak Indicator
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.screenWidth * 0.03,
-                            vertical: context.screenHeight * 0.008,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(AppSizes.br24),
-                            border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                          ),
-                          child: Row(
+                        borderRadius: BorderRadius.circular(AppSizes.br12),
+                        border: Border.all(color: context.colorScheme.primary.withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: AppSizes.icon20),
-                              SizedBox(width: context.screenWidth * 0.01),
                               Text(
-                                '${loaded.streakDays}d Streak',
-                                style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                                'CURRENT SALARY',
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  color: context.colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                currencyFormat.format(loaded.currentSalary),
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ],
+                          ),
+                          Container(
+                            height: 32,
+                            width: 1,
+                            color: context.colorScheme.outlineVariant.withOpacity(0.3),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'TARGET SALARY',
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: context.colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(Icons.edit_rounded, size: 12, color: context.colorScheme.primary),
+                                ],
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                currencyFormat.format(loaded.targetSalary),
+                                style: context.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: context.screenHeight * 0.015),
+
+                  // 2. Sent Applications Count Tile
+                  AppCard(
+                    padding: EdgeInsets.all(context.screenWidth * 0.04),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total Applications Sent',
+                          style: context.textTheme.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w500),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: context.colorScheme.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${loaded.totalApplications}',
+                            style: context.textTheme.titleSmall?.copyWith(
+                              color: context.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: context.screenHeight * 0.02),
-
-                    // Daily Mission banner
+                  ),
+                  
+                  // 3. Upcoming Interview Details
+                  if (loaded.upcomingInterview != null) ...[
+                    SizedBox(height: context.screenHeight * 0.015),
                     Container(
-                      width: double.infinity,
                       padding: EdgeInsets.all(context.screenWidth * 0.04),
                       decoration: BoxDecoration(
-                        color: context.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(AppSizes.br12),
-                        border: Border.all(
-                          color: context.colorScheme.outlineVariant.withOpacity(0.4),
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFFF59E0B).withOpacity(0.12),
+                            context.colorScheme.surface,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(AppSizes.br12),
+                        border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.stars_rounded, color: context.colorScheme.primary, size: AppSizes.icon24),
-                          SizedBox(width: context.screenWidth * 0.03),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.event_note_rounded, color: Color(0xFFF59E0B), size: 20),
+                          ),
+                          SizedBox(width: context.screenWidth * 0.035),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'DAILY MISSION',
-                                  style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.primary,
+                                  'UPCOMING INTERVIEW',
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: const Color(0xFFF59E0B),
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.1,
                                   ),
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  loaded.dailyMission,
+                                  '${loaded.upcomingInterview!['company']} • ${loaded.upcomingInterview!['role']}',
                                   style: context.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(height: 1),
+                                Text(
+                                  loaded.upcomingInterview!['interviewDate'],
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -215,125 +310,189 @@ class DashboardPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    SizedBox(height: context.screenHeight * 0.03),
+                  ],
+                  SizedBox(height: context.screenHeight * 0.015),
 
-                    // Score & Streak Row
-                    Row(
+                  // 4. Counts according to each status
+                  AppCard(
+                    padding: EdgeInsets.all(context.screenWidth * 0.035),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Daily Score Card (Dynamic circle progress)
-                        Expanded(
-                          flex: 11,
-                          child: AppCard(
-                            height: context.screenHeight * 0.2,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: context.screenWidth * 0.22,
-                                      height: context.screenWidth * 0.22,
-                                      child: CircularProgressIndicator(
-                                        value: loaded.dailyScore / 100,
-                                        strokeWidth: 8,
-                                        backgroundColor: context.colorScheme.outlineVariant.withOpacity(0.3),
-                                        color: scoreColor,
-                                      ),
-                                    ),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '${loaded.dailyScore}',
-                                          style: context.textTheme.headlineMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Text(
-                                          'pts',
-                                          style: context.textTheme.bodySmall?.copyWith(
-                                            color: context.colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: context.screenHeight * 0.015),
-                                Text(
-                                  scoreStatus,
-                                  style: TextStyle(
-                                    color: scoreColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
+                        Text(
+                          'Pipeline Distribution',
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        SizedBox(width: context.screenWidth * 0.04),
-                        // Highest Impact Task Card (Pareto HIT)
-                        Expanded(
-                          flex: 12,
-                          child: AppCard(
-                            height: context.screenHeight * 0.2,
+                        SizedBox(height: context.screenHeight * 0.015),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildStatusMiniTile(context, 'Recruit', loaded.statusCounts['Recruiter'] ?? 0, const Color(0xFFF59E0B)),
+                            _buildStatusMiniTile(context, 'Sched', loaded.statusCounts['Interview Scheduled'] ?? 0, context.colorScheme.tertiary),
+                            _buildStatusMiniTile(context, 'Done', loaded.statusCounts['Interview Done'] ?? 0, context.colorScheme.primary),
+                            _buildStatusMiniTile(context, 'Offer', loaded.statusCounts['Offer'] ?? 0, context.colorScheme.secondary),
+                            _buildStatusMiniTile(context, 'Reject', loaded.statusCounts['Rejected'] ?? 0, context.colorScheme.error),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: context.screenHeight * 0.035),
+
+                  // ── Finance Tracker Section ────────────────────────────────
+                  _buildSectionHeader(context, '💰 Finance Tracker'),
+                  SizedBox(height: context.screenHeight * 0.015),
+                  
+                  // Row of 3 Balance, Emergency, Savings
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFinanceCard(
+                          context,
+                          'Balance',
+                          currencyFormat.format(loaded.balance),
+                          Icons.account_balance_wallet_rounded,
+                          context.colorScheme.primary,
+                        ),
+                      ),
+                      SizedBox(width: context.screenWidth * 0.03),
+                      Expanded(
+                        child: _buildFinanceCard(
+                          context,
+                          'Emergency',
+                          currencyFormat.format(loaded.emergencyFund),
+                          Icons.health_and_safety_rounded,
+                          context.colorScheme.secondary,
+                        ),
+                      ),
+                      SizedBox(width: context.screenWidth * 0.03),
+                      Expanded(
+                        child: _buildFinanceCard(
+                          context,
+                          'Savings',
+                          currencyFormat.format(loaded.savings),
+                          Icons.savings_rounded,
+                          context.colorScheme.tertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: context.screenHeight * 0.035),
+
+                  // ── YouTube Tracker Section ────────────────────────────────
+                  _buildSectionHeader(context, '🎥 YouTube Tracker'),
+                  SizedBox(height: context.screenHeight * 0.015),
+
+                  // 1. Content and Published Stats
+                  AppCard(
+                    padding: EdgeInsets.all(context.screenWidth * 0.04),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Content Velocity',
+                              style: context.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              '${loaded.youtubePublishedContent} / ${loaded.youtubeTotalContent} Published',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: const Color(0xFFFF0000),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: context.screenHeight * 0.012),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: loaded.youtubeTotalContent > 0
+                                ? (loaded.youtubePublishedContent / loaded.youtubeTotalContent)
+                                : 0.0,
+                            backgroundColor: context.colorScheme.outlineVariant.withOpacity(0.2),
+                            color: const Color(0xFFFF0000),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // 2. Upcoming Content to be posted
+                  if (loaded.upcomingContent != null) ...[
+                    SizedBox(height: context.screenHeight * 0.015),
+                    Container(
+                      padding: EdgeInsets.all(context.screenWidth * 0.04),
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(AppSizes.br12),
+                        border: Border.all(color: const Color(0xFFFF0000).withOpacity(0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF0000).withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.video_library_rounded, color: Color(0xFFFF0000), size: 18),
+                          ),
+                          SizedBox(width: context.screenWidth * 0.035),
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'PARETO H.I.T.',
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        color: context.colorScheme.tertiary,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.1,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _showEditHitDialog(context, loaded.highestImpactTask),
-                                      icon: Icon(Icons.edit_rounded, color: context.colorScheme.onSurfaceVariant, size: AppSizes.icon16),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                  ],
-                                ),
                                 Text(
-                                  loaded.highestImpactTask,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
+                                  'UPCOMING VIDEO RELEASE',
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: const Color(0xFFFF0000),
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.1,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  loaded.upcomingContent!['title'],
                                   style: context.textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    decoration: loaded.isHitCompleted ? TextDecoration.lineThrough : null,
                                   ),
                                 ),
+                                SizedBox(height: 1),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
+                                    Icon(Icons.calendar_month_rounded, size: 12, color: context.colorScheme.onSurfaceVariant),
+                                    SizedBox(width: 4),
                                     Text(
-                                      loaded.isHitCompleted ? 'Completed' : 'Pending',
-                                      style: TextStyle(
-                                        color: loaded.isHitCompleted
-                                            ? context.colorScheme.secondary
-                                            : context.colorScheme.onSurfaceVariant,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
+                                      'Target: ${loaded.upcomingContent!['target_date']}',
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        color: context.colorScheme.onSurfaceVariant,
                                       ),
                                     ),
-                                    Transform.scale(
-                                      scale: 0.85,
-                                      child: Switch(
-                                        value: loaded.isHitCompleted,
-                                        activeColor: context.colorScheme.secondary,
-                                        onChanged: (val) {
-                                          context.read<DashboardBloc>().add(const DashboardHitToggled());
-                                          HapticFeedback.lightImpact();
-                                        },
+                                    SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.outlineVariant.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        loaded.upcomingContent!['status'].toString().toUpperCase(),
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: context.colorScheme.onSurfaceVariant,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -341,171 +500,135 @@ class DashboardPage extends StatelessWidget {
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: context.screenHeight * 0.03),
-
-                    // Financial KPIs Section (Grid of 4 cards)
-                    Text(
-                      'Financial Health KPI',
-                      style: context.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: context.screenHeight * 0.015),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: context.screenWidth * 0.04,
-                      mainAxisSpacing: context.screenWidth * 0.04,
-                      childAspectRatio: 1.6,
-                      children: [
-                        _buildKpiCard(context, 'Current Salary', currencyFormat.format(loaded.currentSalary), Icons.account_balance_wallet_rounded, context.colorScheme.primary),
-                        _buildKpiCard(context, 'Target Salary', currencyFormat.format(loaded.targetSalary), Icons.track_changes_rounded, context.colorScheme.secondary),
-                        _buildKpiCard(context, 'Liabilities / Debt', currencyFormat.format(loaded.debt), Icons.payment_rounded, context.colorScheme.error),
-                        _buildKpiCard(context, 'Emergency Fund', currencyFormat.format(loaded.emergencyFund), Icons.health_and_safety_rounded, context.colorScheme.secondary),
-                      ],
-                    ),
-                    SizedBox(height: context.screenHeight * 0.03),
-
-                    // Progress Vectors Section
-                    Text(
-                      'Active Vectors Progress',
-                      style: context.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: context.screenHeight * 0.015),
-                    AppCard(
-                      child: Column(
-                        children: [
-                          _buildVectorProgress(context, 'Salary Pivot Goal', salaryPercent, context.colorScheme.secondary),
-                          SizedBox(height: context.screenHeight * 0.02),
-                          _buildVectorProgress(context, 'Career Submissions', careerPercent, context.colorScheme.primary),
-                          SizedBox(height: context.screenHeight * 0.02),
-                          _buildVectorProgress(context, 'YouTube Content Velocity', youtubePercent, const Color(0xFFFF0000)),
                         ],
                       ),
                     ),
-                    SizedBox(height: context.screenHeight * 0.03),
-
-                    // Motivational Insight Card
-                    AppCard(
-                      color: context.colorScheme.surface,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.lightbulb_outline_rounded, color: context.colorScheme.tertiary, size: AppSizes.icon20),
-                                  SizedBox(width: context.screenWidth * 0.02),
-                                  Text(
-                                    'SYSTEMIC LAW INSIGHT',
-                                    style: context.textTheme.bodySmall?.copyWith(
-                                      color: context.colorScheme.tertiary,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  context.read<DashboardBloc>().add(const DashboardInsightRotated());
-                                  HapticFeedback.lightImpact();
-                                },
-                                icon: Icon(Icons.refresh_rounded, color: context.colorScheme.onSurfaceVariant, size: AppSizes.icon20),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: context.screenHeight * 0.015),
-                          Text(
-                            loaded.currentLawInsight,
-                            style: context.textTheme.bodyMedium?.copyWith(
-                              height: 1.4,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: context.screenHeight * 0.05),
                   ],
-                ),
+
+                  SizedBox(height: context.screenHeight * 0.05),
+                ],
               ),
-            );
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _buildKpiCard(BuildContext context, String title, String val, IconData icon, Color color) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Text(
+      title,
+      style: context.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildStatusMiniTile(BuildContext context, String label, int count, Color color) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: context.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        SizedBox(height: 2),
+        Text(
+          label,
+          style: context.textTheme.labelSmall?.copyWith(
+            color: context.colorScheme.onSurfaceVariant,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinanceCard(BuildContext context, String title, String value, IconData icon, Color color) {
     return AppCard(
       padding: EdgeInsets.all(context.screenWidth * 0.03),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: context.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Icon(icon, color: color, size: AppSizes.icon16),
-            ],
-          ),
-          SizedBox(height: context.screenHeight * 0.005),
+          Icon(icon, color: color, size: 16),
+          SizedBox(height: context.screenHeight * 0.012),
           Text(
-            val,
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 1),
+          Text(
+            title,
+            style: context.textTheme.labelSmall?.copyWith(
+              color: context.colorScheme.onSurfaceVariant,
+              fontSize: 11,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildVectorProgress(BuildContext context, String label, double ratio, Color color) {
+class _ClockWidget extends StatefulWidget {
+  const _ClockWidget();
+
+  @override
+  State<_ClockWidget> createState() => _ClockWidgetState();
+}
+
+class _ClockWidgetState extends State<_ClockWidget> {
+  late Timer _timer;
+  late DateTime _now;
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final timeStr = DateFormat('HH:mm').format(_now);
+    final dateStr = DateFormat('EEE, d MMM').format(_now);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-            Text(
-              '${(ratio * 100).toStringAsFixed(0)}%',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
-            ),
-          ],
+        Text(
+          timeStr,
+          style: context.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        SizedBox(height: context.screenHeight * 0.006),
-        LinearProgressIndicator(
-          value: ratio,
-          backgroundColor: context.colorScheme.outlineVariant.withOpacity(0.3),
-          color: color,
-          minHeight: 5,
-          borderRadius: BorderRadius.circular(3),
+        Text(
+          dateStr,
+          style: context.textTheme.labelSmall?.copyWith(
+            color: context.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );

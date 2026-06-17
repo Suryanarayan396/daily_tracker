@@ -14,14 +14,47 @@ import '../bloc/career_tracker_state.dart';
 class CareerTrackerPage extends StatelessWidget {
   const CareerTrackerPage({super.key});
 
+  Future<String?> _selectDateTime(BuildContext context) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 305)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date == null) return null;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time == null) return null;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    return DateFormat('dd MMM yyyy • hh:mm a').format(dt);
+  }
+
+  CareerTrackerModel? _getUpcomingInterview(List<CareerTrackerModel> apps) {
+    final scheduled = apps.where((a) => a.status == 'Interview Scheduled' && a.interviewDate.isNotEmpty).toList();
+    if (scheduled.isEmpty) return null;
+    scheduled.sort((a, b) {
+      try {
+        final dateA = DateFormat('dd MMM yyyy • hh:mm a').parse(a.interviewDate);
+        final dateB = DateFormat('dd MMM yyyy • hh:mm a').parse(b.interviewDate);
+        return dateA.compareTo(dateB);
+      } catch (_) {
+        return a.interviewDate.compareTo(b.interviewDate);
+      }
+    });
+    return scheduled.first;
+  }
+
   // ── Add Application Sheet ─────────────────────────────────────────────────
   void showAddApplicationDialog(BuildContext context) {
     final companyCtrl = TextEditingController();
     final roleCtrl = TextEditingController();
     final salaryCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
-    bool recruiterContacted = false;
     String selectedStatus = 'Applied';
+    String interviewDate = '';
+    String reminderDateTime = '';
 
     showModalBottomSheet(
       context: context,
@@ -78,16 +111,84 @@ class CareerTrackerPage extends StatelessWidget {
                   ],
                   onChanged: (v) { if (v != null) setS(() => selectedStatus = v); },
                 ),
-                SizedBox(height: ctx.screenHeight * 0.012),
-                Row(children: [
-                  Checkbox(
-                    value: recruiterContacted,
-                    activeColor: ctx.colorScheme.primary,
-                    onChanged: (v) => setS(() => recruiterContacted = v ?? false),
+                if (selectedStatus == 'Interview Scheduled') ...[
+                  SizedBox(height: ctx.screenHeight * 0.016),
+                  GestureDetector(
+                    onTap: () async {
+                      final val = await _selectDateTime(ctx);
+                      if (val != null) {
+                        setS(() {
+                          interviewDate = val;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white24),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            interviewDate.isEmpty ? 'Select Interview Date & Time' : interviewDate,
+                            style: TextStyle(
+                              color: interviewDate.isEmpty ? Colors.white54 : Colors.white,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const Icon(Icons.calendar_today_rounded, color: Colors.white54, size: 18),
+                        ],
+                      ),
+                    ),
                   ),
-                  const Text('Recruiter contacted', style: TextStyle(color: Colors.white)),
-                ]),
-                SizedBox(height: ctx.screenHeight * 0.012),
+                  SizedBox(height: ctx.screenHeight * 0.016),
+                  const Text('Reminder Date & Time (Optional)', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final val = await _selectDateTime(ctx);
+                      if (val != null) {
+                        setS(() {
+                          reminderDateTime = val;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white24),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reminderDateTime.isEmpty ? 'Select Custom Reminder Time' : reminderDateTime,
+                              style: TextStyle(
+                                color: reminderDateTime.isEmpty ? Colors.white54 : Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          if (reminderDateTime.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setS(() {
+                                  reminderDateTime = '';
+                                });
+                              },
+                              child: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                            ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.alarm_rounded, color: Colors.white54, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                SizedBox(height: ctx.screenHeight * 0.016),
                 _inputField(ctx, notesCtrl, 'Notes (optional)', Icons.notes_rounded, maxLines: 2),
                 SizedBox(height: ctx.screenHeight * 0.025),
                 SizedBox(
@@ -103,8 +204,10 @@ class CareerTrackerPage extends StatelessWidget {
                         role: role,
                         status: selectedStatus,
                         salary: double.tryParse(salaryCtrl.text.trim()) ?? 0.0,
-                        recruiterContacted: recruiterContacted,
+                        recruiterContacted: false,
+                        interviewDate: interviewDate,
                         notes: notesCtrl.text.trim(),
+                        reminderDateTime: reminderDateTime,
                       ));
                       HapticFeedback.mediumImpact();
                       Navigator.pop(ctx);
@@ -127,14 +230,15 @@ class CareerTrackerPage extends StatelessWidget {
     );
   }
 
-  // ── Edit Application Sheet ────────────────────────────────────────────────
+  // ── Edit Application Sheet (Status Focus & History Timeline) ─────────────
   void _showEditDialog(BuildContext context, CareerTrackerModel app) {
-    final companyCtrl = TextEditingController(text: app.company);
-    final roleCtrl = TextEditingController(text: app.role);
-    final salaryCtrl = TextEditingController(text: app.salary.toStringAsFixed(0));
-    final notesCtrl = TextEditingController(text: app.notes);
-    bool recruiterContacted = app.recruiterContacted;
+    final offeredSalaryCtrl = TextEditingController(
+        text: app.offeredSalary > 0 ? app.offeredSalary.toStringAsFixed(0) : '');
     String selectedStatus = app.status;
+    String interviewDate = app.interviewDate;
+    String reminderDateTime = app.reminderDateTime;
+    final bloc = context.read<CareerTrackerBloc>();
+    final fmt = NumberFormat.simpleCurrency(locale: 'en_IN', decimalDigits: 0);
 
     showModalBottomSheet(
       context: context,
@@ -143,110 +247,294 @@ class CareerTrackerPage extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.br24)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
-            left: ctx.screenWidth * 0.05,
-            right: ctx.screenWidth * 0.05,
-            top: ctx.screenHeight * 0.03,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(child: Container(
-                  width: ctx.screenWidth * 0.12, height: 4,
-                  decoration: BoxDecoration(
-                    color: ctx.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                )),
-                SizedBox(height: ctx.screenHeight * 0.02),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Edit Application',
-                      style: ctx.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold, color: Colors.white)),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      context.read<CareerTrackerBloc>().add(CareerTrackerApplicationDeleted(id: app.id));
-                      HapticFeedback.mediumImpact();
-                    },
-                    icon: Icon(Icons.delete_outline_rounded,
-                        color: ctx.colorScheme.error),
-                  ),
-                ]),
-                SizedBox(height: ctx.screenHeight * 0.02),
-                _inputField(ctx, companyCtrl, 'Company Name', Icons.business_rounded),
-                SizedBox(height: ctx.screenHeight * 0.016),
-                _inputField(ctx, roleCtrl, 'Role / Position', Icons.work_outline_rounded),
-                SizedBox(height: ctx.screenHeight * 0.016),
-                _inputField(ctx, salaryCtrl, 'Target Salary (₹/mo)',
-                    Icons.payments_rounded, inputType: TextInputType.number),
-                SizedBox(height: ctx.screenHeight * 0.016),
-                DropdownButtonFormField<String>(
-                  value: selectedStatus,
-                  dropdownColor: ctx.colorScheme.surface,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                      labelText: 'Pipeline Stage', border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: 'Applied', child: Text('Applied')),
-                    DropdownMenuItem(value: 'Recruiter', child: Text('Recruiter Contacted')),
-                    DropdownMenuItem(value: 'Interview Scheduled', child: Text('Interview Scheduled')),
-                    DropdownMenuItem(value: 'Interview Done', child: Text('Interview Done')),
-                    DropdownMenuItem(value: 'Offer', child: Text('Offer Received')),
-                    DropdownMenuItem(value: 'Rejected', child: Text('Rejected')),
-                  ],
-                  onChanged: (v) { if (v != null) setS(() => selectedStatus = v); },
-                ),
-                SizedBox(height: ctx.screenHeight * 0.012),
-                Row(children: [
-                  Checkbox(
-                    value: recruiterContacted,
-                    activeColor: ctx.colorScheme.primary,
-                    onChanged: (v) => setS(() => recruiterContacted = v ?? false),
-                  ),
-                  const Text('Recruiter contacted', style: TextStyle(color: Colors.white)),
-                ]),
-                SizedBox(height: ctx.screenHeight * 0.012),
-                _inputField(ctx, notesCtrl, 'Notes', Icons.notes_rounded, maxLines: 2),
-                SizedBox(height: ctx.screenHeight * 0.025),
-                SizedBox(
-                  width: double.infinity,
-                  height: ctx.screenHeight * 0.055,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final company = companyCtrl.text.trim();
-                      final role = roleCtrl.text.trim();
-                      if (company.isEmpty || role.isEmpty) return;
-                      
-                      final updated = app.copyWith(
-                        company: company,
-                        role: role,
-                        status: selectedStatus,
-                        salary: double.tryParse(salaryCtrl.text.trim()) ?? app.salary,
-                        recruiterContacted: recruiterContacted,
-                        notes: notesCtrl.text.trim(),
-                      );
-
-                      context.read<CareerTrackerBloc>().add(CareerTrackerApplicationUpdated(model: updated));
-                      HapticFeedback.mediumImpact();
-                      Navigator.pop(ctx);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: ctx.colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.br12)),
+      builder: (ctx) => BlocProvider.value(
+        value: bloc,
+        child: StatefulBuilder(
+          builder: (ctx, setS) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + ctx.screenHeight * 0.03,
+              left: ctx.screenWidth * 0.05,
+              right: ctx.screenWidth * 0.05,
+              top: ctx.screenHeight * 0.03,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: Container(
+                    width: ctx.screenWidth * 0.12, height: 4,
+                    decoration: BoxDecoration(
+                      color: ctx.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: const Text('Save Changes',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  )),
+                  SizedBox(height: ctx.screenHeight * 0.02),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              app.company,
+                              style: ctx.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            Text(
+                              app.role,
+                              style: ctx.textTheme.bodyMedium?.copyWith(
+                                  color: ctx.colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          bloc.add(CareerTrackerApplicationDeleted(id: app.id));
+                          HapticFeedback.mediumImpact();
+                        },
+                        icon: Icon(Icons.delete_outline_rounded,
+                            color: ctx.colorScheme.error),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const Divider(color: Colors.white12, height: 24),
+                  
+                  // Read-only Details
+                  if (app.salary > 0) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Target Salary:', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                        Text(fmt.format(app.salary), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (app.notes.isNotEmpty) ...[
+                    const Text('Notes:', style: TextStyle(color: Colors.white54, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text(app.notes, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 12),
+                  ],
+                  
+                  // Edit Status dropdown
+                  const Text('Update Pipeline Status', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedStatus,
+                    dropdownColor: ctx.colorScheme.surface,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Applied', child: Text('Applied')),
+                      DropdownMenuItem(value: 'Recruiter', child: Text('Recruiter Contacted')),
+                      DropdownMenuItem(value: 'Interview Scheduled', child: Text('Interview Scheduled')),
+                      DropdownMenuItem(value: 'Interview Done', child: Text('Interview Done')),
+                      DropdownMenuItem(value: 'Offer', child: Text('Offer Received')),
+                      DropdownMenuItem(value: 'Rejected', child: Text('Rejected')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setS(() {
+                          selectedStatus = v;
+                        });
+                      }
+                    },
+                  ),
+                  
+                  // Offered Salary Tile (Only show when status is 'Offer')
+                  if (selectedStatus == 'Offer') ...[
+                    SizedBox(height: ctx.screenHeight * 0.02),
+                    const Text('Offered Salary (₹/mo)', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: offeredSalaryCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        hintText: 'Enter offered salary',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
+                  
+                  // Interview Date & Time Tile (Only show when status is 'Interview Scheduled')
+                  if (selectedStatus == 'Interview Scheduled') ...[
+                    SizedBox(height: ctx.screenHeight * 0.02),
+                    const Text('Interview Date & Time', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () async {
+                        final val = await _selectDateTime(ctx);
+                        if (val != null) {
+                          setS(() {
+                            interviewDate = val;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white24),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              interviewDate.isEmpty ? 'Select Date & Time' : interviewDate,
+                              style: TextStyle(
+                                color: interviewDate.isEmpty ? Colors.white54 : Colors.white,
+                              ),
+                            ),
+                            const Icon(Icons.calendar_today_rounded, color: Colors.white54, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: ctx.screenHeight * 0.016),
+                    const Text('Reminder Date & Time (Optional)', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () async {
+                        final val = await _selectDateTime(ctx);
+                        if (val != null) {
+                          setS(() {
+                            reminderDateTime = val;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white24),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                reminderDateTime.isEmpty ? 'Select Custom Reminder Time' : reminderDateTime,
+                                style: TextStyle(
+                                  color: reminderDateTime.isEmpty ? Colors.white54 : Colors.white,
+                                ),
+                              ),
+                            ),
+                            if (reminderDateTime.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  setS(() {
+                                    reminderDateTime = '';
+                                  });
+                                },
+                                child: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                              ),
+                            const SizedBox(width: 8),
+                            const Icon(Icons.alarm_rounded, color: Colors.white54, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  
+                  const Divider(color: Colors.white12, height: 32),
+                  
+                  // Timeline status history list
+                  const Text('Status History', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  FutureBuilder<List<CareerStatusHistoryModel>>(
+                    future: bloc.getStatusHistory(app.id),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)));
+                      }
+                      final history = snapshot.data ?? [];
+                      if (history.isEmpty) {
+                        return const Text('No history found', style: TextStyle(color: Colors.white54, fontSize: 12));
+                      }
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: history.length,
+                        itemBuilder: (context, idx) {
+                          final hist = history[idx];
+                          final timeStr = DateFormat('dd MMM yyyy • hh:mm a').format(hist.changedAt);
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  idx == history.length - 1 ? Icons.check_circle_rounded : Icons.radio_button_checked_rounded,
+                                  size: 16,
+                                  color: idx == history.length - 1 ? ctx.colorScheme.primary : Colors.white54,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        hist.status == 'Recruiter' ? 'Recruiter Contacted' : (hist.status == 'Offer' ? 'Offer Received' : hist.status),
+                                        style: TextStyle(
+                                          color: idx == history.length - 1 ? Colors.white : Colors.white70,
+                                          fontWeight: idx == history.length - 1 ? FontWeight.bold : FontWeight.normal,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        timeStr,
+                                        style: const TextStyle(color: Colors.white30, fontSize: 10),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  
+                  SizedBox(height: ctx.screenHeight * 0.03),
+                  
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: ctx.screenHeight * 0.055,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final offeredSal = double.tryParse(offeredSalaryCtrl.text.trim()) ?? 0.0;
+                        final updated = app.copyWith(
+                          status: selectedStatus,
+                          offeredSalary: offeredSal,
+                          interviewDate: selectedStatus == 'Interview Scheduled' ? interviewDate : '',
+                          reminderDateTime: selectedStatus == 'Interview Scheduled' ? reminderDateTime : '',
+                        );
+                        bloc.add(CareerTrackerApplicationUpdated(model: updated));
+                        HapticFeedback.mediumImpact();
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: ctx.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.br12)),
+                      ),
+                      child: const Text('Save Status',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -376,6 +664,72 @@ class CareerTrackerPage extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: context.screenHeight * 0.03),
+
+                  // ── Upcoming Interview Banner ─────────────────────────────
+                  if (_getUpcomingInterview(state.applications) != null) ...[
+                    (() {
+                      final upcoming = _getUpcomingInterview(state.applications)!;
+                      return Container(
+                        padding: EdgeInsets.all(context.screenWidth * 0.04),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFFF59E0B).withOpacity(0.12),
+                              context.colorScheme.surface,
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppSizes.br12),
+                          border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B).withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.event_note_rounded, color: Color(0xFFF59E0B), size: 20),
+                            ),
+                            SizedBox(width: context.screenWidth * 0.035),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'UPCOMING INTERVIEW',
+                                    style: context.textTheme.labelSmall?.copyWith(
+                                      color: const Color(0xFFF59E0B),
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.1,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    '${upcoming.company} • ${upcoming.role}',
+                                    style: context.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 1),
+                                  Text(
+                                    upcoming.interviewDate,
+                                    style: context.textTheme.bodySmall?.copyWith(
+                                      color: context.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    })(),
+                    SizedBox(height: context.screenHeight * 0.03),
+                  ],
 
                   // ── Salary Target ────────────────────────────────────────
                   AppCard(
@@ -550,11 +904,16 @@ class CareerTrackerPage extends StatelessWidget {
                 style: context.textTheme.bodySmall?.copyWith(
                     color: context.colorScheme.onSurfaceVariant)),
           ])),
-          if (app.salary > 0)
+          if (app.offeredSalary > 0)
+            Text(fmt.format(app.offeredSalary),
+                style: context.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: context.colorScheme.secondary))
+          else if (app.salary > 0)
             Text(fmt.format(app.salary),
                 style: context.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: context.colorScheme.secondary)),
+                    color: context.colorScheme.secondary.withOpacity(0.6))),
         ]),
       ),
     );
@@ -603,19 +962,22 @@ class CareerTrackerPage extends StatelessWidget {
                 Text(app.role,
                     style: context.textTheme.bodySmall?.copyWith(
                         color: context.colorScheme.onSurfaceVariant)),
-                if (app.recruiterContacted)
-                  Padding(
-                     padding: const EdgeInsets.only(top: 3),
-                     child: Row(children: [
-                       Icon(Icons.person_search_rounded,
-                           size: 11, color: const Color(0xFFF59E0B)),
-                       const SizedBox(width: 3),
-                       Text('Recruiter contacted',
-                           style: context.textTheme.labelSmall?.copyWith(
-                               color: const Color(0xFFF59E0B))),
-                     ]),
+                if (app.status == 'Interview Scheduled' && app.interviewDate.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.event_note_rounded, size: 13, color: context.colorScheme.tertiary),
+                      const SizedBox(width: 4),
+                      Text(
+                        app.interviewDate,
+                        style: context.textTheme.labelSmall?.copyWith(
+                          color: context.colorScheme.tertiary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                if (app.notes.isNotEmpty)
+                ] else if (app.notes.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(app.notes,
@@ -624,6 +986,7 @@ class CareerTrackerPage extends StatelessWidget {
                         style: context.textTheme.labelSmall?.copyWith(
                             color: context.colorScheme.outlineVariant)),
                   ),
+                ],
               ]),
             ),
             SizedBox(width: context.screenWidth * 0.02),
@@ -635,11 +998,20 @@ class CareerTrackerPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: statusColor.withOpacity(0.3)),
                 ),
-                child: Text(app.status,
-                    style: context.textTheme.labelSmall?.copyWith(
-                        color: statusColor, fontWeight: FontWeight.bold)),
+                child: Text(
+                  app.status == 'Recruiter' ? 'Recruiter' : app.status,
+                  style: context.textTheme.labelSmall?.copyWith(
+                      color: statusColor, fontWeight: FontWeight.bold),
+                ),
               ),
-              if (app.salary > 0)
+              if (app.status == 'Offer' && app.offeredSalary > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(fmt.format(app.offeredSalary),
+                      style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.secondary, fontWeight: FontWeight.bold)),
+                )
+              else if (app.salary > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(fmt.format(app.salary),

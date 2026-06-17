@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'Daily Tracker';
+  static const String appName = 'Trillionaire Life';
   
   // Storage Keys
   static const String keyUserTheme = 'user_theme_mode';

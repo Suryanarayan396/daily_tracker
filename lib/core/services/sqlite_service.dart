@@ -15,7 +15,7 @@ class SqliteService {
 
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 5,
       onCreate: (db, version) async {
         // Create Job Applications table
         await db.execute('''
@@ -25,10 +25,22 @@ class SqliteService {
             role TEXT NOT NULL,
             status TEXT NOT NULL,
             salary REAL NOT NULL,
+            offeredSalary REAL NOT NULL DEFAULT 0.0,
             dateApplied TEXT NOT NULL,
             recruiterContacted INTEGER NOT NULL,
             interviewDate TEXT NOT NULL,
-            notes TEXT NOT NULL
+            notes TEXT NOT NULL,
+            reminderDateTime TEXT NOT NULL DEFAULT ""
+          )
+        ''');
+
+        // Create Job Application Status History table
+        await db.execute('''
+          CREATE TABLE job_application_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            applicationId INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            changedAt TEXT NOT NULL
           )
         ''');
 
@@ -53,12 +65,13 @@ class SqliteService {
           CREATE TABLE expense_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
+            description TEXT NOT NULL,
             amount REAL NOT NULL,
             date TEXT NOT NULL
           )
         ''');
 
-        // Create Youtube Videos table
+        // Create Youtube Videos table (Legacy/Deprecated but kept for compatibility)
         await db.execute('''
           CREATE TABLE youtube_videos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,7 +84,7 @@ class SqliteService {
           )
         ''');
 
-        // Create Content Calendar table
+        // Create Content Calendar table (Legacy/Deprecated but kept for compatibility)
         await db.execute('''
           CREATE TABLE content_calendar (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +95,7 @@ class SqliteService {
           )
         ''');
 
-        // Create Youtube Settings table
+        // Create Youtube Settings table (Legacy/Deprecated but kept for compatibility)
         await db.execute('''
           CREATE TABLE youtube_settings (
             id INTEGER PRIMARY KEY,
@@ -104,6 +117,80 @@ class SqliteService {
             targetSalary REAL NOT NULL
           )
         ''');
+
+        // Create new Youtube Content table
+        await db.execute('''
+          CREATE TABLE content (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            target_date TEXT NOT NULL,
+            status TEXT NOT NULL,
+            published_at TEXT,
+            created_at TEXT NOT NULL,
+            reminderDateTime TEXT NOT NULL DEFAULT ""
+          )
+        ''');
+
+        // Create new Youtube Channel Stats table
+        await db.execute('''
+          CREATE TABLE channel_stats (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('DROP TABLE IF EXISTS expense_items');
+          await db.execute('''
+            CREATE TABLE expense_items (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              category TEXT NOT NULL,
+              description TEXT NOT NULL,
+              amount REAL NOT NULL,
+              date TEXT NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS content (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL,
+              target_date TEXT NOT NULL,
+              status TEXT NOT NULL,
+              published_at TEXT,
+              created_at TEXT NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS channel_stats (
+              key TEXT PRIMARY KEY,
+              value TEXT NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 4) {
+          try {
+            await db.execute('ALTER TABLE job_applications ADD COLUMN offeredSalary REAL DEFAULT 0.0');
+          } catch (_) {}
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS job_application_status_history (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              applicationId INTEGER NOT NULL,
+              status TEXT NOT NULL,
+              changedAt TEXT NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 5) {
+          try {
+            await db.execute('ALTER TABLE job_applications ADD COLUMN reminderDateTime TEXT DEFAULT ""');
+          } catch (_) {}
+          try {
+            await db.execute('ALTER TABLE content ADD COLUMN reminderDateTime TEXT DEFAULT ""');
+          } catch (_) {}
+        }
       },
     );
   }
@@ -119,6 +206,9 @@ class SqliteService {
   static void notify(String table) {
     _changeController.add(table);
   }
+
+  /// Watch a specific table for changes.
+  static Stream<String> get changeStream => _changeController.stream;
 
   /// Watch a specific table for changes.
   static Stream<String> watchTable(String table) {

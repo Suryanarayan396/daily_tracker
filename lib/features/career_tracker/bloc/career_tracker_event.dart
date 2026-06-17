@@ -24,6 +24,7 @@ final class CareerTrackerApplicationAdded extends CareerTrackerEvent {
   final bool recruiterContacted;
   final String interviewDate;
   final String notes;
+  final String reminderDateTime;
 
   const CareerTrackerApplicationAdded({
     required this.company,
@@ -33,10 +34,11 @@ final class CareerTrackerApplicationAdded extends CareerTrackerEvent {
     required this.recruiterContacted,
     this.interviewDate = '',
     this.notes = '',
+    this.reminderDateTime = '',
   });
 
   @override
-  List<Object?> get props => [company, role, status, salary, recruiterContacted, interviewDate, notes];
+  List<Object?> get props => [company, role, status, salary, recruiterContacted, interviewDate, notes, reminderDateTime];
 }
 
 final class CareerTrackerStatusUpdated extends CareerTrackerEvent {

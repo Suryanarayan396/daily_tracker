@@ -17,6 +17,12 @@ abstract class FinanceTrackerRepository {
 
   Future<List<ExpenseItemModel>> getAllExpenses();
   Stream<String> watchExpenses();
-  Future<void> addExpense(String category, double amount);
+  Future<void> addExpense({
+    required String category,
+    required String description,
+    required double amount,
+    required DateTime date,
+  });
+  Future<void> updateExpense(ExpenseItemModel expense);
   Future<void> deleteExpense(int id);
 }

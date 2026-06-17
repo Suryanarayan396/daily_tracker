@@ -6,28 +6,21 @@ import 'youtube_tracker_state.dart';
 
 class YoutubeTrackerBloc extends Bloc<YoutubeTrackerEvent, YoutubeTrackerState> {
   final YoutubeTrackerRepository _repository;
-  StreamSubscription? _settingsSub;
-  StreamSubscription? _videosSub;
-  StreamSubscription? _calendarSub;
+  StreamSubscription? _statsSub;
+  StreamSubscription? _contentSub;
 
   YoutubeTrackerBloc(this._repository) : super(const YoutubeTrackerState()) {
     on<YoutubeTrackerStarted>(_onStarted);
     on<YoutubeTrackerRefreshRequested>(_onRefreshRequested);
-    on<YoutubeTrackerSubscribersUpdated>(_onSubscribersUpdated);
-    on<YoutubeTrackerVideoAdded>(_onVideoAdded);
-    on<YoutubeTrackerVideoUpdated>(_onVideoUpdated);
-    on<YoutubeTrackerVideoDeleted>(_onVideoDeleted);
-    on<YoutubeTrackerCalendarEntryAdded>(_onCalendarEntryAdded);
-    on<YoutubeTrackerCalendarEntryToggled>(_onCalendarEntryToggled);
-    on<YoutubeTrackerCalendarEntryDeleted>(_onCalendarEntryDeleted);
+    on<YoutubeTrackerStatUpdated>(_onStatUpdated);
+    on<YoutubeTrackerContentAdded>(_onContentAdded);
+    on<YoutubeTrackerContentUpdated>(_onContentUpdated);
+    on<YoutubeTrackerContentDeleted>(_onContentDeleted);
 
-    _settingsSub = _repository.watchSettings().listen((_) {
+    _statsSub = _repository.watchChannelStats().listen((_) {
       add(const YoutubeTrackerRefreshRequested());
     });
-    _videosSub = _repository.watchVideos().listen((_) {
-      add(const YoutubeTrackerRefreshRequested());
-    });
-    _calendarSub = _repository.watchCalendar().listen((_) {
+    _contentSub = _repository.watchContent().listen((_) {
       add(const YoutubeTrackerRefreshRequested());
     });
   }
@@ -38,14 +31,12 @@ class YoutubeTrackerBloc extends Bloc<YoutubeTrackerEvent, YoutubeTrackerState> 
   ) async {
     emit(state.copyWith(isLoading: true, errorMessage: null));
     try {
-      final settings = await _repository.getSettings();
-      final videos = await _repository.getAllVideos();
-      final calendar = await _repository.getCalendarEntries();
+      final stats = await _repository.getChannelStats();
+      final contentList = await _repository.getAllContent();
       emit(state.copyWith(
         isLoading: false,
-        settings: settings,
-        videos: videos,
-        calendarEntries: calendar,
+        stats: stats,
+        contentList: contentList,
       ));
     } catch (e) {
       emit(state.copyWith(isLoading: false, errorMessage: e.toString()));
@@ -57,101 +48,60 @@ class YoutubeTrackerBloc extends Bloc<YoutubeTrackerEvent, YoutubeTrackerState> 
     Emitter<YoutubeTrackerState> emit,
   ) async {
     try {
-      final settings = await _repository.getSettings();
-      final videos = await _repository.getAllVideos();
-      final calendar = await _repository.getCalendarEntries();
+      final stats = await _repository.getChannelStats();
+      final contentList = await _repository.getAllContent();
       emit(state.copyWith(
-        settings: settings,
-        videos: videos,
-        calendarEntries: calendar,
+        stats: stats,
+        contentList: contentList,
       ));
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onSubscribersUpdated(
-    YoutubeTrackerSubscribersUpdated event,
+  Future<void> _onStatUpdated(
+    YoutubeTrackerStatUpdated event,
     Emitter<YoutubeTrackerState> emit,
   ) async {
     try {
-      await _repository.updateSettings(subscribers: event.subscribers);
+      await _repository.updateChannelStat(event.key, event.value);
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onVideoAdded(
-    YoutubeTrackerVideoAdded event,
+  Future<void> _onContentAdded(
+    YoutubeTrackerContentAdded event,
     Emitter<YoutubeTrackerState> emit,
   ) async {
     try {
-      await _repository.addVideo(
+      await _repository.addContent(
         title: event.title,
-        type: event.type,
-        stage: event.stage,
-        views: event.views,
-        watchTimeMinutes: event.watchTimeMinutes,
+        targetDate: event.targetDate,
+        reminderDateTime: event.reminderDateTime,
       );
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onVideoUpdated(
-    YoutubeTrackerVideoUpdated event,
+  Future<void> _onContentUpdated(
+    YoutubeTrackerContentUpdated event,
     Emitter<YoutubeTrackerState> emit,
   ) async {
     try {
-      await _repository.updateVideo(event.model);
+      await _repository.updateContent(event.content);
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
   }
 
-  Future<void> _onVideoDeleted(
-    YoutubeTrackerVideoDeleted event,
+  Future<void> _onContentDeleted(
+    YoutubeTrackerContentDeleted event,
     Emitter<YoutubeTrackerState> emit,
   ) async {
     try {
-      await _repository.deleteVideo(event.id);
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
-    }
-  }
-
-  Future<void> _onCalendarEntryAdded(
-    YoutubeTrackerCalendarEntryAdded event,
-    Emitter<YoutubeTrackerState> emit,
-  ) async {
-    try {
-      await _repository.addCalendarEntry(
-        title: event.title,
-        type: event.type,
-        scheduledDate: event.scheduledDate,
-      );
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
-    }
-  }
-
-  Future<void> _onCalendarEntryToggled(
-    YoutubeTrackerCalendarEntryToggled event,
-    Emitter<YoutubeTrackerState> emit,
-  ) async {
-    try {
-      await _repository.toggleCalendarEntry(event.id);
-    } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
-    }
-  }
-
-  Future<void> _onCalendarEntryDeleted(
-    YoutubeTrackerCalendarEntryDeleted event,
-    Emitter<YoutubeTrackerState> emit,
-  ) async {
-    try {
-      await _repository.deleteCalendarEntry(event.id);
+      await _repository.deleteContent(event.id);
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
@@ -159,9 +109,8 @@ class YoutubeTrackerBloc extends Bloc<YoutubeTrackerEvent, YoutubeTrackerState> 
 
   @override
   Future<void> close() {
-    _settingsSub?.cancel();
-    _videosSub?.cancel();
-    _calendarSub?.cancel();
+    _statsSub?.cancel();
+    _contentSub?.cancel();
     return super.close();
   }
 }

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../models/finance_tracker_model.dart';
 
 sealed class FinanceTrackerEvent extends Equatable {
   const FinanceTrackerEvent();
@@ -54,12 +55,28 @@ final class FinanceTrackerSettingsUpdated extends FinanceTrackerEvent {
 
 final class FinanceTrackerExpenseAdded extends FinanceTrackerEvent {
   final String category;
+  final String description;
   final double amount;
+  final DateTime date;
 
-  const FinanceTrackerExpenseAdded({required this.category, required this.amount});
+  const FinanceTrackerExpenseAdded({
+    required this.category,
+    required this.description,
+    required this.amount,
+    required this.date,
+  });
 
   @override
-  List<Object?> get props => [category, amount];
+  List<Object?> get props => [category, description, amount, date];
+}
+
+final class FinanceTrackerExpenseUpdated extends FinanceTrackerEvent {
+  final ExpenseItemModel expense;
+
+  const FinanceTrackerExpenseUpdated({required this.expense});
+
+  @override
+  List<Object?> get props => [expense];
 }
 
 final class FinanceTrackerExpenseDeleted extends FinanceTrackerEvent {

@@ -14,6 +14,7 @@ class FinanceTrackerBloc extends Bloc<FinanceTrackerEvent, FinanceTrackerState> 
     on<FinanceTrackerRefreshRequested>(_onRefreshRequested);
     on<FinanceTrackerSettingsUpdated>(_onSettingsUpdated);
     on<FinanceTrackerExpenseAdded>(_onExpenseAdded);
+    on<FinanceTrackerExpenseUpdated>(_onExpenseUpdated);
     on<FinanceTrackerExpenseDeleted>(_onExpenseDeleted);
 
     _settingsSub = _repository.watchSettings().listen((_) {
@@ -77,7 +78,23 @@ class FinanceTrackerBloc extends Bloc<FinanceTrackerEvent, FinanceTrackerState> 
     Emitter<FinanceTrackerState> emit,
   ) async {
     try {
-      await _repository.addExpense(event.category, event.amount);
+      await _repository.addExpense(
+        category: event.category,
+        description: event.description,
+        amount: event.amount,
+        date: event.date,
+      );
+    } catch (e) {
+      emit(state.copyWith(errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onExpenseUpdated(
+    FinanceTrackerExpenseUpdated event,
+    Emitter<FinanceTrackerState> emit,
+  ) async {
+    try {
+      await _repository.updateExpense(event.expense);
     } catch (e) {
       emit(state.copyWith(errorMessage: e.toString()));
     }
